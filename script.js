@@ -7,16 +7,30 @@ const gameOverBox = document.getElementById("gameOverBox");
 const finalScore = document.getElementById("finalScore");
 const restartButton = document.getElementById("restartButton");
 
+const dinoFrames = [];
+const dinoFrame1 = new Image();
+dinoFrame1.src = "images/Capybara/CapybaraRun-1.png";
+const dinoFrame2 = new Image();
+dinoFrame2.src = "images/Capybara/CapybaraRun-2.png";
+dinoFrames.push(dinoFrame1, dinoFrame2);
+
+let currentDinoFrame = 0;
+let lastFrameChange = 0;
+const frameDuration = 120;
+
+const obstacleImg = new Image();
+obstacleImg.src = "images/Capybara/CapybaraRun-1.png";
+
 // Ajustes del lienzo
 canvas.width = 800;
-canvas.height = 200;
+canvas.height = 400;
 
 // Configuración del dinosaurio
 let dino = {
     x: 50,
-    y: 150,
-    width: 40,
-    height: 40,
+    y: 350,
+    width: 90,
+    height: 90,
     color: "green",
     isJumping: false,
     velocityY: 0,
@@ -118,14 +132,30 @@ function checkCollision() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar el lienzo
 
+    const now = Date.now();
+    if (now - lastFrameChange >= frameDuration) {
+        currentDinoFrame = (currentDinoFrame + 1) % dinoFrames.length;
+        lastFrameChange = now;
+    }
+
+    const activeDinoFrame = dinoFrames[currentDinoFrame];
+
     // Dibujar el dinosaurio
-    ctx.fillStyle = dino.color;
-    ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+    if (activeDinoFrame.complete && activeDinoFrame.naturalWidth > 0) {
+        ctx.drawImage(activeDinoFrame, dino.x, dino.y, dino.width, dino.height);
+    } else {
+        ctx.fillStyle = dino.color;
+        ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+    }
 
     // Dibujar los obstáculos
     for (let obstacle of obstacles) {
-        ctx.fillStyle = obstacle.color;
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        if (obstacleImg.complete && obstacleImg.naturalWidth > 0) {
+            ctx.drawImage(obstacleImg, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        } else {
+            ctx.fillStyle = obstacle.color;
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        }
     }
 
     // Dibujar la puntuación
