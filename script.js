@@ -1,5 +1,5 @@
 // Juego del dinosaurio
-// Explicación: Controlas a un dinosaurio que corre y salta para evitar obstáculos.
+// Control principal: dibujo, lógica de colisión, spawn de obstáculos y puntuación.
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -8,7 +8,7 @@ const ctx = canvas.getContext("2d");
 canvas.width = 800;
 canvas.height = 200;
 
-// Elementos UI
+// Elementos UI (HUD y overlay)
 const scoreDisplay = document.getElementById("scoreDisplay");
 const overlay = document.getElementById("overlay");
 const finalScore = document.getElementById("finalScore");
@@ -16,44 +16,44 @@ const restartBtn = document.getElementById("restartBtn");
 const countdownEl = document.getElementById("countdown");
 const scoreboardList = document.getElementById("scoreboardList");
 
-// Configuración del dinosaurio
+// Crear objeto dinosaurio con propiedades físicas y visuales
 let dino = createDino();
 function createDino() {
     return {
-        x: 50,
-        y: 150,
+        x: 50, // posición horizontal fija
+        y: 150, // posición vertical inicial (sobre el suelo)
         width: 40,
         height: 40,
         color: "green",
         isJumping: false,
-        velocityY: 0,
+        velocityY: 0, // velocidad vertical
         jumpStrength: 12,
         gravity: 0.6,
     };
 }
 
-// Configuración de los obstáculos
+// Configuración de los obstáculos y dificultad
 let obstacles = [];
-const initialObstacleSpeed = 5; // velocidad en píxeles por frame
+const initialObstacleSpeed = 5; // velocidad inicial de obstáculos
 let obstacleSpeed = initialObstacleSpeed;
-const initialSpawnInterval = 1500; // Tiempo entre obstáculos (ms)
+const initialSpawnInterval = 1500; // ms entre obstáculos al inicio
 let spawnInterval = initialSpawnInterval;
-let lastSpawnTime = 0; // Tiempo del último obstáculo
-let lastDifficultyIncrease = 0; // Puntos en los que se aplicó la última subida
-const difficultyStep = 20; // Subir dificultad cada x puntos
-const minSpawnInterval = 700; // Límite inferior para spawnInterval
+let lastSpawnTime = 0; // timestamp del último spawn
+let lastDifficultyIncrease = 0; // marcador para controlar subidas de dificultad
+const difficultyStep = 20; // puntos para cada aumento de dificultad
+const minSpawnInterval = 700; // límite inferior para spawnInterval
 
-// Puntuación
+// Puntuación (se incrementa cuando un obstáculo sale por la izquierda)
 let score = 0;
 
 // Estado del juego
-let running = false;
-let gameOver = false;
+let running = false; // true mientras el juego corre
+let gameOver = false; // true después de colisión
 
-// Delay inicial antes de empezar (ms)
+// Delay inicial antes de empezar (ms) — requisito: 3 segundos
 const startDelay = 3000;
 
-// Evento: saltar con la barra espaciadora
+// Evento de teclado: saltar si el juego está en curso y el dino está en el suelo
 document.addEventListener("keydown", (e) => {
     if ((e.code === "Space" || e.code === "ArrowUp") && dino.y === 150 && running) {
         dino.velocityY = -dino.jumpStrength;
@@ -61,7 +61,7 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
-// Reiniciar estado del juego a valores iniciales
+// Reiniciar estado del juego a valores iniciales sin recargar la página
 function resetGame() {
     dino = createDino();
     obstacles = [];
@@ -76,13 +76,12 @@ function resetGame() {
     updateScoreDisplay();
 }
 
-// Función para actualizar la posición del dinosaurio
+// Actualizar física del dinosaurio: gravedad y posición vertical
 function updateDino() {
-    // Aplicar gravedad y velocidad vertical para un salto
     dino.velocityY += dino.gravity;
     dino.y += dino.velocityY;
 
-    // Evitar que el dinosaurio caiga por debajo del suelo
+    // Mantener en el suelo y resetear estado de salto
     if (dino.y > 150) {
         dino.y = 150;
         dino.velocityY = 0;
@@ -90,11 +89,11 @@ function updateDino() {
     }
 }
 
-// Función para generar obstáculos
+// Generar obstáculos periódicamente; no genera si el juego no está en ejecución
 function spawnObstacle() {
     if (!running) return;
-    const now = Date.now(); // Verificar si es hora de generar un nuevo obstáculo
-    if (lastSpawnTime === 0) lastSpawnTime = now; // asegurar que el primer spawn espera spawnInterval
+    const now = Date.now();
+    if (lastSpawnTime === 0) lastSpawnTime = now; // asegurar que el primer spawn respete spawnInterval
     if (now - lastSpawnTime > spawnInterval) {
         obstacles.push({
             x: canvas.width,
@@ -107,76 +106,76 @@ function spawnObstacle() {
     }
 }
 
-// Función para actualizar la posición de los obstáculos
+// Mover obstáculos y aumentar puntuación cuando se salen del canvas
 function updateObstacles() {
     for (let i = obstacles.length - 1; i >= 0; i--) {
-        obstacles[i].x -= obstacleSpeed; // Mover a la izquierda
-        // Eliminar obstáculos que han salido del canvas
+        obstacles[i].x -= obstacleSpeed;
         if (obstacles[i].x + obstacles[i].width < 0) {
             obstacles.splice(i, 1);
-            score++; // Incrementar puntuación por cada obstáculo evitado
+            score++; // gana punto por cada obstáculo esquivado
             updateScoreDisplay();
         }
     }
 
-    // dificultad: aumentar velocidad y frecuencia de obstáculos cada cierto puntaje
-    while (score - lastDifficultyIncrease >= difficultyStep) { // si la puntuación ha superado el último paso de dificultad
+    // Aumentar dificultad de forma escalonada según la puntuación
+    while (score - lastDifficultyIncrease >= difficultyStep) {
         obstacleSpeed += 0.15;
-        spawnInterval = Math.max(minSpawnInterval, spawnInterval - 75); // reducir spawn menos agresivamente
+        spawnInterval = Math.max(minSpawnInterval, spawnInterval - 75);
         lastDifficultyIncrease += difficultyStep;
     }
 }
 
-// Función para detectar colisiones
+// Detectar colisiones entre jugador y cualquier obstáculo
 function checkCollision() {
-    for (let obstacle of obstacles) { // for of para iterar sobre cada obstáculo
+    for (let obstacle of obstacles) {
         if (
             dino.x < obstacle.x + obstacle.width &&
             dino.x + dino.width > obstacle.x &&
             dino.y < obstacle.y + obstacle.height &&
             dino.y + dino.height > obstacle.y
         ) {
-            endGame();
+            endGame(); // manejar fin de partida sin recargar la página
         }
     }
 }
 
-// Función para dibujar el juego
+// Dibujar todos los elementos del juego en el canvas
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar el lienzo
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Dibujar el dinosaurio
+    // Jugador
     ctx.fillStyle = dino.color;
     ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
 
-    // Dibujar los obstáculos
+    // Obstáculos
     for (let obstacle of obstacles) {
         ctx.fillStyle = obstacle.color;
         ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
     }
 
-    // Dibujar la puntuación en canvas (además del HUD)
+    // Puntuación en el canvas (complemento del HUD)
     ctx.fillStyle = "black";
     ctx.font = "20px Arial";
     ctx.fillText("Puntuación: " + score, 10, 30);
 }
 
+// Actualizar texto del HUD con la puntuación actual
 function updateScoreDisplay() {
     scoreDisplay.textContent = `Puntuación: ${score}`;
 }
 
-// Manejo de fin del juego
+// Manejo de fin de juego: mostrar overlay, enviar score y actualizar scoreboard
 function endGame() {
     if (gameOver) return;
     gameOver = true;
     running = false;
     finalScore.textContent = `Puntuación: ${score}`;
     overlay.classList.remove("hidden");
-    // enviar score al servidor y actualizar scoreboard
+    // Intentar enviar la puntuación al servidor; si falla, igualmente actualizamos visualmente
     submitScore(score).then(fetchScores).catch(() => fetchScores());
 }
 
-// Bucle del juego
+// Bucle principal: si `running` está activo actualiza la lógica, siempre dibuja
 function gameLoop() {
     if (running) {
         updateDino();
@@ -185,10 +184,10 @@ function gameLoop() {
         checkCollision();
     }
     draw();
-    requestAnimationFrame(gameLoop); // Llamar al siguiente frame
+    requestAnimationFrame(gameLoop);
 }
 
-// Iniciar el juego con delay y contador visual
+// Iniciar el juego después de un delay visual de 3 segundos (countdown)
 function startWithDelay() {
     resetGame();
     let remaining = startDelay / 1000;
@@ -201,16 +200,17 @@ function startWithDelay() {
             clearInterval(interval);
             countdownEl.textContent = "";
             running = true;
-            lastSpawnTime = Date.now();
+            lastSpawnTime = Date.now(); // marcar inicio para spawn
         }
     }, 1000);
 }
 
+// Reiniciar al hacer clic en el botón de overlay
 restartBtn.addEventListener("click", () => {
     startWithDelay();
 });
 
-// Scoreboard: comunicación con servidor
+// Enviar la puntuación al servidor usando la API POST /scores
 async function submitScore(value) {
     try {
         await fetch('/scores', {
@@ -223,6 +223,7 @@ async function submitScore(value) {
     }
 }
 
+// Obtener la lista de puntuaciones ordenadas desde el servidor
 async function fetchScores() {
     try {
         const res = await fetch('/scores');
@@ -231,11 +232,11 @@ async function fetchScores() {
         renderScoreboard(data);
     } catch (e) {
         console.warn('No se pudo obtener scoreboard', e);
-        // fallback: limpiar lista
         scoreboardList.innerHTML = '';
     }
 }
 
+// Renderizar la lista en el overlay (Top 10)
 function renderScoreboard(list) {
     scoreboardList.innerHTML = '';
     list.slice(0, 10).forEach(item => {
@@ -246,6 +247,6 @@ function renderScoreboard(list) {
     });
 }
 
-// Start the loop and initial delayed start
+// Iniciar bucle y arrancar con el delay inicial
 gameLoop();
 startWithDelay();
