@@ -6,7 +6,24 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <canvas id="gameCanvas"></canvas>
+    <div id="gameContainer">
+      <canvas id="gameCanvas"></canvas>
+      <div id="hud">
+        <div id="scoreDisplay">Puntuación: 0</div>
+        <div id="countdown"></div>
+      </div>
+    </div>
+
+    <div id="overlay" class="hidden">
+      <div id="gameOverBox">
+        <h2 id="gameOverTitle">Game Over</h2>
+        <p id="finalScore">Puntuación: 0</p>
+        <button id="restartBtn">Reiniciar</button>
+        <h3>Scoreboard (Top)</h3>
+        <ol id="scoreboardList"></ol>
+      </div>
+    </div>
+
     <script src="script.js"></script>
   </body>
 </html>
