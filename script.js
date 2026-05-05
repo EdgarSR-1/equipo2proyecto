@@ -3,6 +3,9 @@
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const gameOverBox = document.getElementById("gameOverBox");
+const finalScore = document.getElementById("finalScore");
+const restartButton = document.getElementById("restartButton");
 
 // Ajustes del lienzo
 canvas.width = 800;
@@ -32,6 +35,11 @@ const minSpawnInterval = 700; // Límite inferior para spawnInterval
 
 // Puntuación
 let score = 0;
+let gameOver = false;
+
+restartButton.addEventListener("click", () => {
+    document.location.reload();
+});
 
 // Evento: saltar con la barra espaciadora
 document.addEventListener("keydown", (e) => {
@@ -98,8 +106,10 @@ function checkCollision() {
             dino.y < obstacle.y + obstacle.height &&
             dino.y + dino.height > obstacle.y
         ) {
-            alert("¡Game Over! Puntuación: " + score);
-            document.location.reload(); // Reiniciar el juego
+            gameOver = true;
+            finalScore.textContent = "Puntuacion: " + score;
+            gameOverBox.classList.remove("hidden");
+            return;
         }
     }
 }
@@ -126,6 +136,10 @@ function draw() {
 
 // Bucle del juego
 function gameLoop() {
+    if (gameOver) {
+        return;
+    }
+
     updateDino();
     spawnObstacle();
     updateObstacles();

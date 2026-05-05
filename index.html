@@ -6,7 +6,15 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <canvas id="gameCanvas"></canvas>
+    <h1 class="title">Capibara Underground</h1>
+    <div class="game-container">
+      <canvas id="gameCanvas"></canvas>
+      <div id="gameOverBox" class="game-over-box hidden">
+        <h2>Perdiste</h2>
+        <p id="finalScore">Puntuacion: 0</p>
+        <button id="restartButton">Reintentar</button>
+      </div>
+    </div>
     <script src="script.js"></script>
   </body>
 </html>
