@@ -8,6 +8,28 @@ const ctx = canvas.getContext("2d");
 canvas.width = 800;
 canvas.height = 200;
 
+//Música de fondo
+const bgMusic = new Audio("musica.mp3");
+bgMusic.loop = true;
+bgMusic.volume = 0.3;
+bgMusic.muted = true;
+
+
+// Sonido de salto
+const jumpSound = new Audio("salto.mp3");
+jumpSound.volume = 0.5;
+
+// Sonido de colisión
+const hitSound = new Audio("colision.mp3");
+hitSound.volume = 0.7;
+
+bgMusic.play();
+
+// Luego cuando el usuario presione cualquier tecla:
+document.addEventListener("keydown", () => {
+    bgMusic.muted = false;
+}, { once: true });
+
 // Configuración del dinosaurio
 let dino = {
     x: 50,
@@ -32,6 +54,8 @@ const minSpawnInterval = 700; // Límite inferior para spawnInterval
 
 // Puntuación
 let score = 0;
+
+
 
 // Evento: saltar con la barra espaciadora
 document.addEventListener("keydown", (e) => {
@@ -89,6 +113,41 @@ function updateObstacles() {
     }
 }
 
+//Sonido de salto
+document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && dino.y === 150) {
+        dino.velocityY = -dino.jumpStrength;
+        dino.isJumping = true;
+
+        // 🔊 Reproducir sonido de salto
+        jumpSound.currentTime = 0; // reinicia el sonido si ya estaba sonando
+        jumpSound.play();
+    }
+});
+
+//Sonido de colisión
+function checkCollision() {
+    for (let obstacle of obstacles) {
+        if (
+            dino.x < obstacle.x + obstacle.width &&
+            dino.x + dino.width > obstacle.x &&
+            dino.y < obstacle.y + obstacle.height &&
+            dino.y + dino.height > obstacle.y
+        ) {
+
+            // 🔊 Reproducir sonido de colisión
+            hitSound.currentTime = 0;
+            hitSound.play();
+
+            // ⛔ Detener música de fondo
+            bgMusic.pause();
+
+            alert("¡Game Over! Puntuación: " + score);
+            document.location.reload();
+        }
+    }
+}
+
 // Función para detectar colisiones
 function checkCollision() {
     for (let obstacle of obstacles) { // for of para iterar sobre cada obstáculo
@@ -98,6 +157,14 @@ function checkCollision() {
             dino.y < obstacle.y + obstacle.height &&
             dino.y + dino.height > obstacle.y
         ) {
+              // 🔊 Detener completamente la música
+            bgMusic.pause();           // la pausa
+            bgMusic.currentTime = 0;   // la regresa al inicio
+
+            // 🔊 Sonido de colisión
+            hitSound.currentTime = 0;
+            hitSound.play();
+
             alert("¡Game Over! Puntuación: " + score);
             document.location.reload(); // Reiniciar el juego
         }
@@ -123,6 +190,24 @@ function draw() {
     ctx.font = "20px Arial";
     ctx.fillText("Puntuación: " + score, 10, 30);
 }
+
+// 🎵 Intentar reproducir automáticamente (permitido porque está en mute)
+bgMusic.play().catch(() => {
+    console.log("Autoplay bloqueado incluso en mute (raro)");
+});
+
+document.addEventListener("keydown", (e) => {
+    // 🔊 Activar sonido en la primera interacción
+    bgMusic.muted = false;
+
+    if (e.code === "Space" && dino.y === 150) {
+        dino.velocityY = -dino.jumpStrength;
+        dino.isJumping = true;
+
+        jumpSound.currentTime = 0;
+        jumpSound.play();
+    }
+});
 
 // Bucle del juego
 function gameLoop() {
