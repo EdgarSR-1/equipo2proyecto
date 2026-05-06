@@ -31,6 +31,7 @@ const obstacleTypes = [
         frameDuration: 0,
         width: 90,
         height: 90,
+        yOffset: -12,
         hitbox: { left: 0.333, right: 0.333, top: 0.267, bottom: 0.022 },
     },
     {
@@ -107,7 +108,7 @@ const GROUND_TILE_H = canvas.height - GROUND_Y; // alto en pantalla
 const GROUND_TILE_W = Math.round(GROUND_TILE_H * GROUND_SRC.w / GROUND_SRC.h);
 // Pixeles extra para bajar visualmente al capybara (su PNG tiene aire arriba).
 const DINO_FLOOR_OFFSET = 40;
-const DINO_FLOOR_Y = GROUND_Y - 140 + DINO_FLOOR_OFFSET;
+const DINO_FLOOR_Y = GROUND_Y - 170 + DINO_FLOOR_OFFSET;
 
 // Modo debug: muestra las hitboxes en pantalla. Alternar con la tecla "H".
 let showHitboxes = true;
@@ -127,7 +128,7 @@ let dino = {
     gravity: 0.6,
     // Hitbox definida por insets desde cada lado del sprite (en píxeles).
     // Subir 'top' encoge la parte superior; subir 'bottom' encoge la inferior, etc.
-    hitbox: { left: 32, right: 28, top: 28, bottom: 38 },
+    hitbox: { left: 30, right: 30, top: 63, bottom: 13 },
 };
 
 // Devuelve el rectángulo de hitbox absoluto de una entidad a partir de sus insets.
