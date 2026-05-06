@@ -1,11 +1,14 @@
 // Juego del dinosaurio
-// Explicación: Controlas a un dinosaurio que corre y salta para evitar obstáculos.
+// Explicación: Controlas a un capibara que corre y salta para evitar obstáculos.
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const gameOverBox = document.getElementById("gameOverBox");
+const overlay = document.getElementById("overlay");
 const finalScore = document.getElementById("finalScore");
-const restartButton = document.getElementById("restartButton");
+const restartButton = document.getElementById("restartBtn") || document.getElementById("restartButton");
+const scoreDisplay = document.getElementById("scoreDisplay");
+const countdownEl = document.getElementById("countdown");
+const scoreboardList = document.getElementById("scoreboardList");
 
 const dinoFrames = [];
 const dinoFrame1 = new Image();
@@ -25,39 +28,147 @@ obstacleImg.src = "images/Capybara/CapybaraRun-1.png";
 canvas.width = 800;
 canvas.height = 400;
 
-// Configuración del dinosaurio
-let dino = {
-    x: 50,
-    y: 350,
-    width: 90,
-    height: 90,
-    color: "green",
-    isJumping: false,
-    velocityY: 0,
-    jumpStrength: 12,
-    gravity: 0.6,
-};
+// Configuración del personaje
+function createDino() {
+    return {
+        x: 50,
+        y: 350,
+        width: 90,
+        height: 90,
+        color: "green",
+        isJumping: false,
+        velocityY: 0,
+        jumpStrength: 12,
+        gravity: 0.6,
+    };
+}
+
+let dino = createDino();
 
 // Configuración de los obstáculos
-let obstacles = [];
-let obstacleSpeed = 5; // velocidad en píxeles por frame
-let spawnInterval = 1500; // Tiempo entre obstáculos (ms)
-let lastSpawnTime = 0; // Tiempo del último obstáculo
-let lastDifficultyIncrease = 0; // Puntos en los que se aplicó la última subida
-const difficultyStep = 20; // Subir dificultad cada x puntos
-const minSpawnInterval = 700; // Límite inferior para spawnInterval
+let obstacles = [];                         // Lista de obstáculos activos
+const initialObstacleSpeed = 5;             // Velocidad en pixeles por frame al inicio
+let obstacleSpeed = initialObstacleSpeed;   // Velocidad actual de los obstáculos (aumenta con la puntuación)
+const initialSpawnInterval = 1500;          // Tiempo en ms entre spawns de obstáculos al inicio
+let spawnInterval = initialSpawnInterval;   // Tiempo actual entre spawns (disminuye con la puntuación)
+let lastSpawnTime = 0;                      // Tiempo desde último spawn de obstáculo
+let lastDifficultyIncrease = 0;             // Puntuación en la que se hizo el último aumento de dificultad
+const difficultyStep = 20;                  // Puntos necesarios para cada aumento de dificultad
+const minSpawnInterval = 700;               // Tiempo mínimo entre spawns (límite inferior para spawnInterval)
 
-// Puntuación
+// Puntuación y estado
 let score = 0;
 let gameOver = false;
+let running = false;
+let startCountdownInterval = null;
+const startDelay = 3000;
 
-restartButton.addEventListener("click", () => {
-    document.location.reload();
+function updateScoreDisplay() {
+    if (scoreDisplay) {
+        scoreDisplay.textContent = `Puntuación: ${score}`;
+    }
+}
+
+function hideOverlay() {
+    if (overlay) {
+        overlay.classList.add("hidden");
+    }
+}
+
+function showOverlay() {
+    if (overlay) {
+        overlay.classList.remove("hidden");
+    }
+}
+
+function renderScoreboard(list) {
+    if (!scoreboardList) return;
+    scoreboardList.innerHTML = "";
+    list.slice(0, 10).forEach((item) => {
+        const li = document.createElement("li");
+        const date = item.time ? new Date(item.time).toLocaleString() : "Sin fecha";
+        li.textContent = `${item.score} — ${date}`;
+        scoreboardList.appendChild(li);
+    });
+}
+
+async function submitScore(value) {
+    try {
+        await fetch("/scores", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ score: value, time: Date.now() }),
+        });
+    } catch (e) {
+        console.warn("No se pudo enviar score al servidor", e);
+    }
+}
+
+async function fetchScores() {
+    try {
+        const res = await fetch("/scores");
+        if (!res.ok) throw new Error("No hay respuesta");
+        const data = await res.json();
+        renderScoreboard(data);
+    } catch (e) {
+        console.warn("No se pudo obtener scoreboard", e);
+        if (scoreboardList) {
+            scoreboardList.innerHTML = "";
+        }
+    }
+}
+
+function resetGame() {
+    dino = createDino();
+    obstacles = [];
+    obstacleSpeed = initialObstacleSpeed;
+    spawnInterval = initialSpawnInterval;
+    lastSpawnTime = 0;
+    lastDifficultyIncrease = 0;
+    score = 0;
+    gameOver = false;
+    running = false;
+    updateScoreDisplay();
+    finalScore.textContent = "Puntuación: 0";
+    hideOverlay();
+    if (startCountdownInterval) {
+        clearInterval(startCountdownInterval);
+        startCountdownInterval = null;
+    }
+}
+
+function startWithDelay() {
+    resetGame();
+    let remaining = startDelay / 1000;
+    if (countdownEl) {
+        countdownEl.textContent = `Comienza en ${remaining}...`;
+    }
+    startCountdownInterval = setInterval(() => {
+        remaining -= 1;
+        if (remaining > 0) {
+            if (countdownEl) {
+                countdownEl.textContent = `Comienza en ${remaining}...`;
+            }
+            return;
+        }
+
+        clearInterval(startCountdownInterval);
+        startCountdownInterval = null;
+        if (countdownEl) {
+            countdownEl.textContent = "";
+        }
+        running = true;
+        lastSpawnTime = Date.now();
+    }, 1000);
+}
+
+restartButton?.addEventListener("click", () => {
+    startWithDelay();
 });
 
-// Evento: saltar con la barra espaciadora
+// Evento: saltar con la barra espaciadora o flecha arriba
 document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && dino.y === 150) {
+    if ((e.code === "Space" || e.code === "ArrowUp") && running && dino.y === 150) {
         dino.velocityY = -dino.jumpStrength;
         dino.isJumping = true;
     }
@@ -79,7 +190,11 @@ function updateDino() {
 
 // Función para generar obstáculos
 function spawnObstacle() {
-    const now = Date.now(); // Verificar si es hora de generar un nuevo obstáculo
+    if (!running) return;
+    const now = Date.now();
+    if (lastSpawnTime === 0) {
+        lastSpawnTime = now;
+    }
     if (now - lastSpawnTime > spawnInterval) {
         obstacles.push({
             x: canvas.width,
@@ -95,11 +210,11 @@ function spawnObstacle() {
 // Función para actualizar la posición de los obstáculos
 function updateObstacles() {
     for (let i = obstacles.length - 1; i >= 0; i--) {
-        obstacles[i].x -= obstacleSpeed; // Mover a la izquierda
-        // Eliminar obstáculos que han salido del canvas
+        obstacles[i].x -= obstacleSpeed;
         if (obstacles[i].x + obstacles[i].width < 0) {
             obstacles.splice(i, 1);
-            score++; // Incrementar puntuación por cada obstáculo evitado
+            score++;            // Incrementar puntuación por cada obstáculo que se sale
+            updateScoreDisplay();
         }
     }
 
@@ -120,9 +235,12 @@ function checkCollision() {
             dino.y < obstacle.y + obstacle.height &&
             dino.y + dino.height > obstacle.y
         ) {
+            if (gameOver) return;
             gameOver = true;
-            finalScore.textContent = "Puntuacion: " + score;
-            gameOverBox.classList.remove("hidden");
+            running = false;
+            finalScore.textContent = `Puntuación: ${score}`;
+            showOverlay();
+            submitScore(score).then(fetchScores).catch(() => fetchScores());
             return;
         }
     }
@@ -161,22 +279,23 @@ function draw() {
     // Dibujar la puntuación
     ctx.fillStyle = "white";
     ctx.font = "20px Arial";
-    ctx.fillText("Puntuación: " + score, 10, 30);
+    ctx.fillText(`Puntuación: ${score}`, 10, 30);
 }
 
 // Bucle del juego
 function gameLoop() {
-    if (gameOver) {
-        return;
+    if (running) {
+        updateDino();
+        spawnObstacle();
+        updateObstacles();
+        checkCollision();
     }
 
-    updateDino();
-    spawnObstacle();
-    updateObstacles();
-    checkCollision();
     draw();
     requestAnimationFrame(gameLoop); // Llamar al siguiente frame
 }
 
-// Iniciar el juego
+updateScoreDisplay();
 gameLoop();
+startWithDelay();
+fetchScores();

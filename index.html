@@ -6,15 +6,32 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <h1 class="title">Capibara Underground</h1>
-    <div class="game-container">
+    <!-- Contenedor principal del juego -->
+    <div id="gameContainer" class="game-container">
+      <!-- Lienzo donde se dibuja el juego -->
       <canvas id="gameCanvas"></canvas>
-      <div id="gameOverBox" class="game-over-box hidden">
-        <h2>Perdiste</h2>
-        <p id="finalScore">Puntuacion: 0</p>
-        <button id="restartButton">Reintentar</button>
+      <!-- HUD (Head-Up Display): puntuación y contador de inicio -->
+      <div id="hud">
+        <div id="scoreDisplay">Puntuación: 0</div>
+        <div id="countdown"></div>
       </div>
     </div>
+
+    <!-- Overlay mostrado al finalizar la partida -->
+    <div id="overlay" class="hidden">
+      <div id="gameOverBox" class="game-over-box">
+        <!-- Título del overlay -->
+        <h2 id="gameOverTitle">Game Over</h2>
+        <!-- Puntuación final mostrada al jugador -->
+        <p id="finalScore">Puntuación: 0</p>
+        <!-- Botón para reiniciar (inicia delay y resetea estado) -->
+        <button id="restartBtn">Reiniciar</button>
+        <!-- Lista con los mejores intentos obtenidos del servidor -->
+        <h3>Scoreboard (Top)</h3>
+        <ol id="scoreboardList"></ol>
+      </div>
+    </div>
+
     <script src="script.js"></script>
   </body>
 </html>
