@@ -12,8 +12,13 @@ body {
 
 canvas {
   border: 2px solid #fff;
+<<<<<<< Updated upstream
   background: #000;
   margin-bottom: 15px;
+=======
+  background: linear-gradient(#87ceeb, #c8e9f5);
+  display: block;
+>>>>>>> Stashed changes
 }
 
 /* CRITICAL FIX: Hides the Game Over overlay when the game is running */
