@@ -111,7 +111,10 @@ const DINO_FLOOR_OFFSET = 40;
 const DINO_FLOOR_Y = GROUND_Y - 170 + DINO_FLOOR_OFFSET;
 
 // Modo debug: muestra las hitboxes en pantalla. Alternar con la tecla "H".
-let showHitboxes = true;
+let showHitboxes = false;
+
+// Desplazamiento horizontal acumulado del suelo, para que se sienta en movimiento.
+let groundOffset = 0;
 
 // Configuración del dinosaurio
 // hitbox: offset relativo al sprite + tamaño. Si lo cambias, se actualiza
@@ -160,9 +163,77 @@ function rollNextSpawnDelay() {
 let score = 0;
 let gameOver = false;
 
-restartButton.addEventListener("click", () => {
-    document.location.reload();
-});
+// HUD y mejor puntuacion persistente
+const hudScoreEl = document.getElementById("hudScore");
+const hudBestEl = document.getElementById("hudBest");
+const finalBestEl = document.getElementById("finalBest");
+const btnHitbox = document.getElementById("btnHitbox");
+const btnMenu = document.getElementById("btnMenu");
+const backToMenuButton = document.getElementById("backToMenuButton");
+
+let bestScore = 0;
+try {
+    const saved = parseInt(localStorage.getItem("capybaraBest") || "0", 10);
+    if (!Number.isNaN(saved)) bestScore = saved;
+} catch (_) {}
+if (hudBestEl) hudBestEl.textContent = String(bestScore);
+
+let lastShownScore = -1;
+function updateHUD() {
+    if (!hudScoreEl) return;
+    if (score !== lastShownScore) {
+        hudScoreEl.textContent = String(score);
+        hudScoreEl.classList.remove("bump");
+        // forzar reflow para reiniciar animacion
+        void hudScoreEl.offsetWidth;
+        hudScoreEl.classList.add("bump");
+        lastShownScore = score;
+        if (score > bestScore) {
+            bestScore = score;
+            if (hudBestEl) hudBestEl.textContent = String(bestScore);
+            try { localStorage.setItem("capybaraBest", String(bestScore)); } catch (_) {}
+        }
+    }
+}
+
+function resetGame() {
+    score = 0;
+    obstacles.length = 0;
+    pendingSpawns.length = 0;
+    obstacleSpeed = 5;
+    lastSpawnTime = Date.now();
+    nextSpawnDelay = 1500;
+    dino.y = DINO_FLOOR_Y;
+    dino.velocityY = 0;
+    dino.isJumping = false;
+    currentScene = 0;
+    nextScene = null;
+    lastSceneChange = Date.now();
+    fadeStart = 0;
+    groundOffset = 0;
+    lastShownScore = -1;
+    gameOver = false;
+    gameOverBox.classList.add("hidden");
+    if (hudScoreEl) hudScoreEl.textContent = "0";
+    gameLoop();
+}
+
+restartButton.addEventListener("click", resetGame);
+
+if (backToMenuButton) {
+    backToMenuButton.addEventListener("click", () => goToMenu());
+}
+
+if (btnHitbox) {
+    btnHitbox.addEventListener("click", () => {
+        showHitboxes = !showHitboxes;
+        btnHitbox.classList.toggle("is-active", showHitboxes);
+    });
+}
+
+if (btnMenu) {
+    btnMenu.addEventListener("click", () => goToMenu());
+}
 
 // Evento: saltar con la barra espaciadora
 document.addEventListener("keydown", (e) => {
@@ -294,7 +365,9 @@ function checkCollision() {
             d.y + d.height > o.y
         ) {
             gameOver = true;
+            saveScoreToBoard(score);
             finalScore.textContent = "Puntuacion: " + score;
+            if (finalBestEl) finalBestEl.textContent = "Mejor: " + bestScore;
             gameOverBox.classList.remove("hidden");
             return;
         }
@@ -311,12 +384,18 @@ function draw() {
         nextScene = (currentScene + 1) % scenes.length;
         fadeStart = nowScene;
     }
+    const sceneTime = nowScene / 1000; // segundos
     function drawScene(idx, alpha) {
         ctx.globalAlpha = alpha;
-        for (const layer of scenes[idx]) {
-            if (layer.complete && layer.naturalWidth > 0) {
-                ctx.drawImage(layer, 0, 0, canvas.width, canvas.height);
-            }
+        const layers = scenes[idx];
+        for (let i = 0; i < layers.length; i++) {
+            const layer = layers[i];
+            if (!(layer.complete && layer.naturalWidth > 0)) continue;
+            // Parallax: capas traseras (i bajo) lentas, frontales rapidas.
+            const speed = 8 + i * 16; // px/s
+            const offset = (sceneTime * speed) % canvas.width;
+            ctx.drawImage(layer, -offset, 0, canvas.width, canvas.height);
+            ctx.drawImage(layer, canvas.width - offset, 0, canvas.width, canvas.height);
         }
         ctx.globalAlpha = 1;
     }
@@ -341,7 +420,8 @@ function draw() {
         const step = GROUND_TILE_W - overlapX;
         const drawY = GROUND_Y - 2;
         const drawH = canvas.height - drawY + overlapY;
-        for (let x = -overlapX; x < canvas.width; x += step) {
+        groundOffset = (groundOffset + obstacleSpeed) % step;
+        for (let x = -overlapX - groundOffset; x < canvas.width; x += step) {
             ctx.drawImage(
                 groundImg,
                 GROUND_SRC.x, GROUND_SRC.y, GROUND_SRC.w, GROUND_SRC.h,
@@ -399,13 +479,8 @@ function draw() {
         }
     }
 
-    // Dibujar la puntuación
-    ctx.fillStyle = "white";
-    ctx.font = "20px Arial";
-    ctx.fillText("Puntuación: " + score, 10, 30);
-    if (showHitboxes) {
-        ctx.fillText("Hitboxes ON (H para alternar)", 10, 55);
-    }
+    // Score se muestra via HUD HTML
+    updateHUD();
 }
 
 // Bucle del juego
@@ -422,5 +497,334 @@ function gameLoop() {
     requestAnimationFrame(gameLoop); // Llamar al siguiente frame
 }
 
-// Iniciar el juego
-gameLoop();
+// ---------- Menú inicial ----------
+const startMenu = document.getElementById("startMenu");
+const gameScreen = document.getElementById("gameScreen");
+const btnStart = document.getElementById("btnStart");
+const btnInstructions = document.getElementById("btnInstructions");
+const btnCredits = document.getElementById("btnCredits");
+const instructionsModal = document.getElementById("instructionsModal");
+const creditsModal = document.getElementById("creditsModal");
+const scoreboardModal = document.getElementById("scoreboardModal");
+const scoreboardList = document.getElementById("scoreboardList");
+const scoreboardEmpty = document.getElementById("scoreboardEmpty");
+const btnScoreboard = document.getElementById("btnScoreboard");
+
+const SCOREBOARD_KEY = "capybaraTop5";
+const SCOREBOARD_MAX = 5;
+
+function loadScoreboard() {
+    try {
+        const raw = localStorage.getItem(SCOREBOARD_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+            .map((n) => parseInt(n, 10))
+            .filter((n) => Number.isFinite(n) && n > 0)
+            .sort((a, b) => b - a)
+            .slice(0, SCOREBOARD_MAX);
+    } catch (_) {
+        return [];
+    }
+}
+
+function saveScoreToBoard(value) {
+    if (!Number.isFinite(value) || value <= 0) return;
+    const board = loadScoreboard();
+    board.push(value);
+    board.sort((a, b) => b - a);
+    const top = board.slice(0, SCOREBOARD_MAX);
+    try { localStorage.setItem(SCOREBOARD_KEY, JSON.stringify(top)); } catch (_) {}
+}
+
+function renderScoreboard() {
+    if (!scoreboardList) return;
+    const board = loadScoreboard();
+    scoreboardList.innerHTML = "";
+    if (board.length === 0) {
+        if (scoreboardEmpty) scoreboardEmpty.classList.remove("hidden");
+        return;
+    }
+    if (scoreboardEmpty) scoreboardEmpty.classList.add("hidden");
+    board.forEach((value, idx) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="sb-rank">#${idx + 1}</span><span class="sb-score">${value}</span>`;
+        scoreboardList.appendChild(li);
+    });
+}
+
+function showModal(modal) {
+    modal.classList.remove("hidden");
+}
+function hideModal(modal) {
+    modal.classList.add("hidden");
+}
+
+btnInstructions.addEventListener("click", () => showModal(instructionsModal));
+btnCredits.addEventListener("click", () => showModal(creditsModal));
+if (btnScoreboard) {
+    btnScoreboard.addEventListener("click", () => {
+        renderScoreboard();
+        showModal(scoreboardModal);
+    });
+}
+document.querySelectorAll(".close-modal").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-close");
+        hideModal(document.getElementById(id));
+    });
+});
+[instructionsModal, creditsModal, scoreboardModal].forEach((m) => {
+    if (!m) return;
+    m.addEventListener("click", (e) => {
+        if (e.target === m) hideModal(m);
+    });
+});
+
+const TRANSITION_MS = 1900;
+let isTransitioning = false;
+
+function goToGame() {
+    if (isTransitioning) return;
+    if (!startMenu.classList.contains("hidden") === false && !gameScreen.classList.contains("hidden")) return;
+    isTransitioning = true;
+
+    document.body.style.overflow = "auto";
+
+    // Asegura ambos fondos vivos durante el cross-fade
+    startGameBackground();
+
+    gameScreen.classList.remove("hidden");
+    gameScreen.classList.add("is-entering");
+    startMenu.classList.add("is-leaving");
+
+    resetGame();
+
+    setTimeout(() => {
+        startMenu.classList.add("hidden");
+        startMenu.classList.remove("is-leaving");
+        gameScreen.classList.remove("is-entering");
+        stopMenuBackground();
+        isTransitioning = false;
+    }, TRANSITION_MS);
+}
+
+function goToMenu() {
+    if (isTransitioning) return;
+    if (gameScreen.classList.contains("hidden")) return;
+    isTransitioning = true;
+
+    // Detiene el bucle de juego sin mostrar la caja de Game Over
+    gameOver = true;
+    if (gameOverBox) gameOverBox.classList.add("hidden");
+
+    // Asegura el fondo del menu vivo para que aparezca con el cross-fade
+    startMenuBackground();
+
+    startMenu.classList.remove("hidden");
+    startMenu.classList.add("is-entering");
+    gameScreen.classList.add("is-leaving");
+
+    setTimeout(() => {
+        gameScreen.classList.add("hidden");
+        gameScreen.classList.remove("is-leaving");
+        startMenu.classList.remove("is-entering");
+        stopGameBackground();
+        // Limpia estado del juego para la proxima partida
+        score = 0;
+        obstacles.length = 0;
+        pendingSpawns.length = 0;
+        obstacleSpeed = 5;
+        dino.y = DINO_FLOOR_Y;
+        dino.velocityY = 0;
+        dino.isJumping = false;
+        if (hudScoreEl) hudScoreEl.textContent = "0";
+        isTransitioning = false;
+    }, TRANSITION_MS);
+}
+
+btnStart.addEventListener("click", goToGame);
+
+// ---------- Fondo animado detras del juego (sincronizado con la escena) ----------
+const gameBgCanvas = document.getElementById("gameBgCanvas");
+let gameBgRafId = null;
+
+function resizeGameBgCanvas() {
+    if (!gameBgCanvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    gameBgCanvas.width = Math.round(w * dpr);
+    gameBgCanvas.height = Math.round(h * dpr);
+    gameBgCanvas.style.width = w + "px";
+    gameBgCanvas.style.height = h + "px";
+    const c = gameBgCanvas.getContext("2d");
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawGameBgScene(c, idx, alpha, cw, ch, t) {
+    c.globalAlpha = alpha;
+    const layers = scenes[idx];
+    for (let i = 0; i < layers.length; i++) {
+        const layer = layers[i];
+        if (!(layer.complete && layer.naturalWidth > 0)) continue;
+        const speed = 8 + i * 16; // px/s, mismas curvas que en el canvas del juego
+        const ratio = layer.naturalWidth / layer.naturalHeight;
+        const drawH = ch;
+        const drawW = Math.max(1, drawH * ratio);
+        const offset = ((t * speed) % drawW + drawW) % drawW;
+        const overlap = 2;
+        for (let x = -offset; x < cw; x += drawW) {
+            c.drawImage(layer, x, 0, drawW + overlap, drawH);
+        }
+    }
+    c.globalAlpha = 1;
+}
+
+function gameBgLoop() {
+    if (!gameBgCanvas) return;
+    const c = gameBgCanvas.getContext("2d");
+    const cw = parseFloat(gameBgCanvas.style.width) || window.innerWidth;
+    const ch = parseFloat(gameBgCanvas.style.height) || window.innerHeight;
+    const now = performance.now();
+    const t = now / 1000;
+    c.clearRect(0, 0, cw, ch);
+
+    // Reutiliza la misma rotacion de escena del juego (currentScene/nextScene/fadeStart/SCENE_FADE_MS).
+    if (nextScene !== null) {
+        const k = Math.min(1, (Date.now() - fadeStart) / SCENE_FADE_MS);
+        drawGameBgScene(c, currentScene, 1 - k, cw, ch, t);
+        drawGameBgScene(c, nextScene, k, cw, ch, t);
+    } else {
+        drawGameBgScene(c, currentScene, 1, cw, ch, t);
+    }
+
+    gameBgRafId = requestAnimationFrame(gameBgLoop);
+}
+
+function startGameBackground() {
+    if (!gameBgCanvas) return;
+    resizeGameBgCanvas();
+    if (gameBgRafId === null) {
+        gameBgRafId = requestAnimationFrame(gameBgLoop);
+    }
+}
+
+function stopGameBackground() {
+    if (gameBgRafId !== null) {
+        cancelAnimationFrame(gameBgRafId);
+        gameBgRafId = null;
+    }
+}
+
+window.addEventListener("resize", resizeGameBgCanvas);
+
+// ---------- Fondo animado del menu inicial ----------
+const menuCanvas = document.getElementById("menuCanvas");
+const menuSceneDefs = [
+    { folder: "1. NEW CLOUDS", layers: 3 },
+    { folder: "2. NEW CLOUDS", layers: 2 },
+    { folder: "3. NEW CLOUDS", layers: 6 },
+    { folder: "4. NEW CLOUDS", layers: 3 },
+];
+const menuScenes = menuSceneDefs.map((def) => {
+    const imgs = [];
+    for (let i = 1; i <= def.layers; i++) {
+        const img = new Image();
+        img.src = `images/FondoInicial/${def.folder}/${i}.png`;
+        imgs.push(img);
+    }
+    return imgs;
+});
+
+const MENU_SCENE_DURATION_MS = 6000;
+const MENU_SCENE_FADE_MS = 1400;
+let menuCurrent = 0;
+let menuNext = null;
+let menuLastChange = 0;
+let menuFadeStart = 0;
+let menuRafId = null;
+
+function resizeMenuCanvas() {
+    if (!menuCanvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = menuCanvas.clientWidth || window.innerWidth;
+    const h = menuCanvas.clientHeight || window.innerHeight;
+    menuCanvas.width = Math.round(w * dpr);
+    menuCanvas.height = Math.round(h * dpr);
+    const c = menuCanvas.getContext("2d");
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawMenuScene(c, idx, alpha, cw, ch, t) {
+    c.globalAlpha = alpha;
+    const layers = menuScenes[idx];
+    // 1.png (i=0) es la capa MAS ATRAS, se dibuja primero.
+    // i creciente = mas al frente, mas rapida.
+    for (let i = 0; i < layers.length; i++) {
+        const layer = layers[i];
+        if (!(layer.complete && layer.naturalWidth > 0)) continue;
+        const speed = 8 + i * 18; // px/s
+        // Mantener la relacion de aspecto del PNG, cubrir el alto y tilear horizontalmente.
+        const ratio = layer.naturalWidth / layer.naturalHeight;
+        const drawH = ch;
+        const drawW = Math.max(1, drawH * ratio);
+        // Modular por drawW para que la repeticion sea perfectamente cicilica.
+        const offset = ((t * speed) % drawW + drawW) % drawW;
+        const overlap = 2; // px de solape para esconder la costura entre tiles
+        for (let x = -offset; x < cw; x += drawW) {
+            c.drawImage(layer, x, 0, drawW + overlap, drawH);
+        }
+    }
+    c.globalAlpha = 1;
+}
+
+function menuLoop() {
+    if (!menuCanvas) return;
+    const c = menuCanvas.getContext("2d");
+    const cw = menuCanvas.clientWidth;
+    const ch = menuCanvas.clientHeight;
+    const now = performance.now();
+    const t = now / 1000;
+
+    if (!menuLastChange) menuLastChange = now;
+    if (menuNext === null && now - menuLastChange >= MENU_SCENE_DURATION_MS) {
+        menuNext = (menuCurrent + 1) % menuScenes.length;
+        menuFadeStart = now;
+    }
+
+    c.clearRect(0, 0, cw, ch);
+    if (menuNext !== null) {
+        const k = Math.min(1, (now - menuFadeStart) / MENU_SCENE_FADE_MS);
+        drawMenuScene(c, menuCurrent, 1 - k, cw, ch, t);
+        drawMenuScene(c, menuNext, k, cw, ch, t);
+        if (k >= 1) {
+            menuCurrent = menuNext;
+            menuNext = null;
+            menuLastChange = now;
+        }
+    } else {
+        drawMenuScene(c, menuCurrent, 1, cw, ch, t);
+    }
+
+    menuRafId = requestAnimationFrame(menuLoop);
+}
+
+function startMenuBackground() {
+    if (!menuCanvas) return;
+    resizeMenuCanvas();
+    if (menuRafId === null) {
+        menuRafId = requestAnimationFrame(menuLoop);
+    }
+}
+
+function stopMenuBackground() {
+    if (menuRafId !== null) {
+        cancelAnimationFrame(menuRafId);
+        menuRafId = null;
+    }
+}
+
+window.addEventListener("resize", resizeMenuCanvas);
+startMenuBackground();

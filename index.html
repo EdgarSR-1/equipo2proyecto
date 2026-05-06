@@ -1,20 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>Juego del Dinosaurio</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>Capibara Underground</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css?v=21" />
   </head>
   <body>
-    <h1 class="title">Capibara Underground</h1>
-    <div class="game-container">
-      <canvas id="gameCanvas"></canvas>
-      <div id="gameOverBox" class="game-over-box hidden">
-        <h2>Perdiste</h2>
-        <p id="finalScore">Puntuacion: 0</p>
-        <button id="restartButton">Reintentar</button>
+    <div id="startMenu" class="start-menu">
+      <canvas id="menuCanvas" class="menu-bg-canvas" aria-hidden="true"></canvas>
+      <div class="menu-content">
+        <img src="images/Logo/Logo.png" alt="Capibara Underground" class="menu-logo" />
+        <div class="menu-buttons">
+          <button id="btnStart" class="wood-btn" type="button"><span>INICIAR</span></button>
+          <button id="btnInstructions" class="wood-btn" type="button"><span>INSTRUCCIONES</span></button>
+          <button id="btnCredits" class="wood-btn" type="button"><span>CREDITOS</span></button>
+        </div>
       </div>
     </div>
-    <script src="script.js?v=15"></script>
+
+    <div id="instructionsModal" class="modal hidden">
+      <div class="modal-card">
+        <h2>Instrucciones</h2>
+        <ul>
+          <li>Presiona <b>Espacio</b> para saltar.</li>
+          <li>Esquiva troncos, hongos y obstaculos voladores.</li>
+          <li>Cada obstaculo evitado suma puntos.</li>
+          <li>Pulsa <b>H</b> para alternar las hitboxes.</li>
+        </ul>
+        <button class="menu-btn close-modal" data-close="instructionsModal">Cerrar</button>
+      </div>
+    </div>
+
+    <div id="scoreboardModal" class="modal hidden">
+      <div class="modal-card">
+        <h2>Mejores Puntuaciones</h2>
+        <ol id="scoreboardList" class="scoreboard-list"></ol>
+        <p id="scoreboardEmpty" class="scoreboard-empty hidden">Aun no hay puntuaciones registradas.</p>
+        <button class="menu-btn close-modal" data-close="scoreboardModal">Cerrar</button>
+      </div>
+    </div>
+
+    <div id="creditsModal" class="modal hidden">
+      <div class="modal-card">
+        <h2>Creditos</h2>
+        <p><b>Equipo 2 - Capy Rush</b></p>
+        <p>Desarrollado por:</p>
+        <ul>
+          <li>Axel Patricio De Gyves Garcia</li>
+          <li>Luis Carlos Ortiz de Montellano Gómez</li>
+          <li>Regina Flores Gutiérrez</li>
+          <li>Camila Jiménez González</li>
+        </ul>
+        <button class="menu-btn close-modal" data-close="creditsModal">Cerrar</button>
+      </div>
+    </div>
+
+    <div id="gameScreen" class="game-screen hidden">
+      <canvas id="gameBgCanvas" class="game-bg-canvas" aria-hidden="true"></canvas>
+      <div class="game-topbar">
+        <button id="btnMenu" class="icon-btn" title="Volver al menu" aria-label="Volver al menu">&#9664; Menu</button>
+        <button id="btnScoreboard" class="icon-btn" title="Ver mejores puntuaciones" aria-label="Ver mejores puntuaciones">Scoreboard</button>
+      </div>
+      <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+          <div class="hud-pill">
+            <span class="hud-label">Puntos</span>
+            <span id="hudScore" class="hud-value">0</span>
+          </div>
+          <div class="hud-pill hud-pill--alt">
+            <span class="hud-label">Mejor</span>
+            <span id="hudBest" class="hud-value">0</span>
+          </div>
+        </div>
+        <div class="hint">Presiona <b>Espacio</b> para saltar</div>
+        <div id="gameOverBox" class="game-over-box hidden">
+          <h2>Perdiste</h2>
+          <p id="finalScore">Puntuacion: 0</p>
+          <p id="finalBest" class="final-best">Mejor: 0</p>
+          <div class="game-over-actions">
+            <button id="restartButton" class="menu-btn">Reintentar</button>
+            <button id="backToMenuButton" class="menu-btn menu-btn--ghost">Menu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js?v=27"></script>
   </body>
 </html>
