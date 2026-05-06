@@ -8,7 +8,6 @@ const finalScore = document.getElementById("finalScore");
 const restartButton = document.getElementById("restartBtn") || document.getElementById("restartButton");
 const scoreDisplay = document.getElementById("scoreDisplay");
 const countdownEl = document.getElementById("countdown");
-const scoreboardList = document.getElementById("scoreboardList");
 
 const dinoFrames = [];
 const dinoFrame1 = new Image();
@@ -81,17 +80,6 @@ function showOverlay() {
     }
 }
 
-function renderScoreboard(list) {
-    if (!scoreboardList) return;
-    scoreboardList.innerHTML = "";
-    list.slice(0, 10).forEach((item) => {
-        const li = document.createElement("li");
-        const date = item.time ? new Date(item.time).toLocaleString() : "Sin fecha";
-        li.textContent = `${item.score} — ${date}`;
-        scoreboardList.appendChild(li);
-    });
-}
-
 async function submitScore(value) {
     try {
         await fetch("/scores", {
@@ -101,20 +89,6 @@ async function submitScore(value) {
         });
     } catch (e) {
         console.warn("No se pudo enviar score al servidor", e);
-    }
-}
-
-async function fetchScores() {
-    try {
-        const res = await fetch("/scores");
-        if (!res.ok) throw new Error("No hay respuesta");
-        const data = await res.json();
-        renderScoreboard(data);
-    } catch (e) {
-        console.warn("No se pudo obtener scoreboard", e);
-        if (scoreboardList) {
-            scoreboardList.innerHTML = "";
-        }
     }
 }
 
@@ -240,7 +214,6 @@ function checkCollision() {
             running = false;
             finalScore.textContent = `Puntuación: ${score}`;
             showOverlay();
-            submitScore(score).then(fetchScores).catch(() => fetchScores());
             return;
         }
     }
