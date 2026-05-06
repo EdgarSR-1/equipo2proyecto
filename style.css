@@ -1,7 +1,10 @@
 body {
   margin: 0;
   background: #111;
+  color: #fff; /* Fixes invisible text on dark background */
+  font-family: Arial, sans-serif;
   display: flex;
+  flex-direction: column; /* Stacks the canvas and HUD vertically */
   justify-content: center;
   align-items: center;
   height: 100vh;
@@ -10,4 +13,51 @@ body {
 canvas {
   border: 2px solid #fff;
   background: #000;
+  margin-bottom: 15px;
+}
+
+/* CRITICAL FIX: Hides the Game Over overlay when the game is running */
+.hidden {
+  display: none !important;
+}
+
+/* UI Adjustments for a cleaner look */
+#hud {
+  display: flex;
+  justify-content: space-between;
+  width: 800px; /* Matches canvas width */
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+#overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 30px;
+  border: 2px solid #fff;
+  border-radius: 10px;
+  text-align: center;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  background: #fff;
+  color: #000;
+  border: none;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+button:hover {
+  background: #ddd;
+}
+
+#scoreboardList {
+  text-align: left;
+  margin-top: 15px;
 }
