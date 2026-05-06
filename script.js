@@ -32,7 +32,7 @@ canvas.height = 400;
 function createDino() {
     return {
         x: 50,
-        y: 350,
+        y: 150,
         width: 90,
         height: 90,
         color: "green",
