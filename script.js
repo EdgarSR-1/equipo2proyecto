@@ -3,6 +3,11 @@
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+// antialiasing nearest-neighbor en canvas
+if (ctx) {
+    ctx.imageSmoothingEnabled = false;
+    try { ctx.imageSmoothingQuality = 'low'; } catch (_) {}
+}
 const gameOverBox = document.getElementById("gameOverBox");
 const finalScore = document.getElementById("finalScore");
 const restartButton = document.getElementById("restartButton");
@@ -377,6 +382,12 @@ function checkCollision() {
 // Función para dibujar el juego
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar el lienzo
+    // Asegurar nearest-neighbor justo antes de dibujar (evita que algún
+    // cambio previo reactive que se vea borroso)
+    if (ctx) {
+        ctx.imageSmoothingEnabled = false;
+        try { ctx.imageSmoothingQuality = 'low'; } catch (_) {}
+    }
 
     // Rotación de escena con crossfade.
     const nowScene = Date.now();
@@ -393,7 +404,7 @@ function draw() {
             if (!(layer.complete && layer.naturalWidth > 0)) continue;
             // Parallax: capas traseras (i bajo) lentas, frontales rapidas.
             const speed = 8 + i * 16; // px/s
-            const offset = (sceneTime * speed) % canvas.width;
+            const offset = Math.round((sceneTime * speed) % canvas.width);
             ctx.drawImage(layer, -offset, 0, canvas.width, canvas.height);
             ctx.drawImage(layer, canvas.width - offset, 0, canvas.width, canvas.height);
         }
@@ -425,7 +436,7 @@ function draw() {
             ctx.drawImage(
                 groundImg,
                 GROUND_SRC.x, GROUND_SRC.y, GROUND_SRC.w, GROUND_SRC.h,
-                x, drawY, GROUND_TILE_W, drawH
+                Math.round(x), Math.round(drawY), Math.round(GROUND_TILE_W), Math.round(drawH)
             );
         }
     }
@@ -440,7 +451,10 @@ function draw() {
 
     // Dibujar el dinosaurio
     if (activeDinoFrame.complete && activeDinoFrame.naturalWidth > 0) {
-        ctx.drawImage(activeDinoFrame, dino.x, dino.y, dino.width, dino.height);
+        ctx.drawImage(
+            activeDinoFrame,
+            Math.round(dino.x), Math.round(dino.y), Math.round(dino.width), Math.round(dino.height)
+        );
     } else {
         ctx.fillStyle = dino.color;
         ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
@@ -461,9 +475,16 @@ function draw() {
             if (type.frames > 1) {
                 const fw = img.naturalWidth / type.frames;
                 const fh = img.naturalHeight;
-                ctx.drawImage(img, obstacle.frame * fw, 0, fw, fh, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                ctx.drawImage(
+                    img,
+                    Math.round(obstacle.frame * fw), 0, Math.round(fw), Math.round(fh),
+                    Math.round(obstacle.x), Math.round(obstacle.y), Math.round(obstacle.width), Math.round(obstacle.height)
+                );
             } else {
-                ctx.drawImage(img, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                ctx.drawImage(
+                    img,
+                    Math.round(obstacle.x), Math.round(obstacle.y), Math.round(obstacle.width), Math.round(obstacle.height)
+                );
             }
         } else {
             ctx.fillStyle = obstacle.color;
@@ -661,10 +682,20 @@ function resizeGameBgCanvas() {
     gameBgCanvas.style.height = h + "px";
     const c = gameBgCanvas.getContext("2d");
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // para pixel art:
+    if (c) {
+        c.imageSmoothingEnabled = false;
+        try { c.imageSmoothingQuality = 'low'; } catch (_) {}
+    }
 }
 
 function drawGameBgScene(c, idx, alpha, cw, ch, t) {
     c.globalAlpha = alpha;
+    // para pixel art:
+    if (c) {
+        c.imageSmoothingEnabled = false;
+        try { c.imageSmoothingQuality = 'low'; } catch (_) {}
+    }
     const layers = scenes[idx];
     for (let i = 0; i < layers.length; i++) {
         const layer = layers[i];
@@ -755,10 +786,20 @@ function resizeMenuCanvas() {
     menuCanvas.height = Math.round(h * dpr);
     const c = menuCanvas.getContext("2d");
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // para pixel art: 
+    if (c) {
+        c.imageSmoothingEnabled = false;
+        try { c.imageSmoothingQuality = 'low'; } catch (_) {}
+    }
 }
 
 function drawMenuScene(c, idx, alpha, cw, ch, t) {
     c.globalAlpha = alpha;
+    // para pixel art:
+    if (c) {
+        c.imageSmoothingEnabled = false;
+        try { c.imageSmoothingQuality = 'low'; } catch (_) {}
+    }
     const layers = menuScenes[idx];
     // 1.png (i=0) es la capa MAS ATRAS, se dibuja primero.
     // i creciente = mas al frente, mas rapida.

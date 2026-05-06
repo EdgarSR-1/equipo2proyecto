@@ -131,6 +131,10 @@ canvas {
   border: none;
   border-radius: 10px;
   background: linear-gradient(#87ceeb, #c8e9f5);
+  /* Asegura que el canvas escalado conserve píxeles (nearest-neighbor) */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 
 .hud {
@@ -463,6 +467,15 @@ canvas {
   height: auto;
   filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.5));
   image-rendering: pixelated;
+}
+
+/* Clase para imágenes pixel-art en HTML: antialiasing nearest-neighbor */
+.pixel-art {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  image-rendering: -o-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
 }
 
 .menu-buttons {
