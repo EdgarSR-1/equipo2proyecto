@@ -1,340 +1,959 @@
 // Juego del dinosaurio
-// Explicación: Controlas a un capibara que corre y salta para evitar obstáculos.
+// Versión fusionada: visuales avanzados + scoreboard localStorage
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+
 const overlay = document.getElementById("overlay");
 const finalScore = document.getElementById("finalScore");
-const restartButton = document.getElementById("restartBtn") || document.getElementById("restartButton");
+const restartButton = document.getElementById("restartBtn");
 const scoreDisplay = document.getElementById("scoreDisplay");
 const countdownEl = document.getElementById("countdown");
 
-const dinoFrames = [];
-const dinoFrame1 = new Image();
-dinoFrame1.src = "images/Capybara/CapybaraRun-1.png";
-const dinoFrame2 = new Image();
-dinoFrame2.src = "images/Capybara/CapybaraRun-2.png";
-dinoFrames.push(dinoFrame1, dinoFrame2);
+const scoreTableBody = document.getElementById("scoreTableBody");
 
-let currentDinoFrame = 0;
-let lastFrameChange = 0;
-const frameDuration = 120;
-
-const obstacleImg = new Image();
-obstacleImg.src = "images/Capybara/CapybaraRun-1.png";
+// ======================================================
+// SCOREBOARD LOCAL
+// ======================================================
 
 const scoreStorageKey = "dinoGameScores";
 const maxScores = 5;
 
-const scoreTableBody = document.getElementById("scoreTableBody");
-
 let scoreHistory = loadScoreHistory();
 
-// Ajustes del lienzo
-canvas.width = 800;
-canvas.height = 400;
+function loadScoreHistory() {
+    try {
+        const storedScores = localStorage.getItem(scoreStorageKey);
 
-// Configuración del personaje
-function createDino() {
-    return {
-        x: 50,
-        y: 150,
-        width: 90,
-        height: 90,
-        color: "green",
-        isJumping: false,
-        velocityY: 0,
-        jumpStrength: 12,
-        gravity: 0.6,
-    };
-}
+        if (!storedScores) return [];
 
-let dino = createDino();
+        const parsedScores = JSON.parse(storedScores);
 
-// Configuración de los obstáculos
-let obstacles = [];                         // Lista de obstáculos activos
-const initialObstacleSpeed = 5;             // Velocidad en pixeles por frame al inicio
-let obstacleSpeed = initialObstacleSpeed;   // Velocidad actual de los obstáculos (aumenta con la puntuación)
-const initialSpawnInterval = 1500;          // Tiempo en ms entre spawns de obstáculos al inicio
-let spawnInterval = initialSpawnInterval;   // Tiempo actual entre spawns (disminuye con la puntuación)
-let lastSpawnTime = 0;                      // Tiempo desde último spawn de obstáculo
-let lastDifficultyIncrease = 0;             // Puntuación en la que se hizo el último aumento de dificultad
-const difficultyStep = 20;                  // Puntos necesarios para cada aumento de dificultad
-const minSpawnInterval = 700;               // Tiempo mínimo entre spawns (límite inferior para spawnInterval)
+        if (!Array.isArray(parsedScores)) return [];
 
-// Puntuación y estado
-let score = 0;
-let gameOver = false;
-let running = false;
-let startCountdownInterval = null;
-const startDelay = 3000;
-
-function updateScoreDisplay() {
-    if (scoreDisplay) {
-        scoreDisplay.textContent = `Puntuación: ${score}`;
+        return parsedScores.filter((value) =>
+            Number.isFinite(value)
+        );
+    } catch {
+        return [];
     }
 }
 
-function hideOverlay() {
-    if (overlay) {
-        overlay.classList.add("hidden");
-    }
-}
-
-function showOverlay() {
-    if (overlay) {
-        overlay.classList.remove("hidden");
-    }
+function saveScoreHistory() {
+    localStorage.setItem(
+        scoreStorageKey,
+        JSON.stringify(scoreHistory)
+    );
 }
 
 function saveScore() {
     scoreHistory.unshift(score);
 
     scoreHistory = scoreHistory
-        .sort((firstScore, secondScore) => secondScore - firstScore)
+        .sort((a, b) => b - a)
         .slice(0, maxScores);
 
     saveScoreHistory();
     renderScoreTable();
 }
 
-function loadScoreHistory() {
-    try {
-        const storedScores = localStorage.getItem(scoreStorageKey);
-
-        if (!storedScores) {
-            return [];
-        }
-
-        const parsedScores = JSON.parse(storedScores);
-
-        if (!Array.isArray(parsedScores)) {
-            return [];
-        }
-
-        return parsedScores.filter((scoreValue) =>
-            Number.isFinite(scoreValue)
-        );
-    } catch (error) {
-        return [];
-    }
-}
-
-function saveScoreHistory() {
-    try {
-        localStorage.setItem(
-            scoreStorageKey,
-            JSON.stringify(scoreHistory)
-        );
-    } catch (error) {
-        console.warn("No se pudo guardar el score");
-    }
-}
-
 function renderScoreTable() {
     scoreTableBody.innerHTML = "";
 
-    const rankedScores = [...scoreHistory].sort(
-        (firstScore, secondScore) => secondScore - firstScore
-    );
+    const rankedScores = [...scoreHistory]
+        .sort((a, b) => b - a);
 
     if (rankedScores.length === 0) {
-        const emptyRow = document.createElement("tr");
+        const row = document.createElement("tr");
 
-        emptyRow.innerHTML =
+        row.innerHTML =
             `<td colspan="2">Sin partidas aún</td>`;
 
-        scoreTableBody.appendChild(emptyRow);
+        scoreTableBody.appendChild(row);
         return;
     }
 
     rankedScores.forEach((points, index) => {
         const row = document.createElement("tr");
 
-        row.innerHTML =
-            `<td>${index + 1}</td><td>${points}</td>`;
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${points}</td>
+        `;
 
         scoreTableBody.appendChild(row);
     });
 }
 
-function resetGame() {
-    dino = createDino();
-    obstacles = [];
-    obstacleSpeed = initialObstacleSpeed;
-    spawnInterval = initialSpawnInterval;
-    lastSpawnTime = 0;
-    lastDifficultyIncrease = 0;
-    score = 0;
-    gameOver = false;
-    running = false;
-    updateScoreDisplay();
-    finalScore.textContent = "Puntuación: 0";
-    hideOverlay();
-    if (startCountdownInterval) {
-        clearInterval(startCountdownInterval);
-        startCountdownInterval = null;
+// ======================================================
+// CANVAS
+// ======================================================
+
+canvas.width = 800;
+canvas.height = 400;
+
+// ======================================================
+// DINO
+// ======================================================
+
+const dinoFrames = [];
+
+const dinoFrame1 = new Image();
+dinoFrame1.src = "images/Capybara/CapybaraRun-1.png";
+
+const dinoFrame2 = new Image();
+dinoFrame2.src = "images/Capybara/CapybaraRun-2.png";
+
+dinoFrames.push(dinoFrame1, dinoFrame2);
+
+let currentDinoFrame = 0;
+let lastFrameChange = 0;
+const frameDuration = 120;
+
+// ======================================================
+// ESCENAS
+// ======================================================
+
+const SCENE_DURATION_MS = 15000;
+const SCENE_FADE_MS = 1800;
+
+const sceneDefs = [
+    { folder: "Clouds 1", layers: 4 },
+    { folder: "Clouds 2", layers: 4 },
+    { folder: "Clouds 3", layers: 4 },
+    { folder: "Clouds 4", layers: 4 },
+    { folder: "Clouds 5", layers: 5 },
+    { folder: "Clouds 6", layers: 6 },
+    { folder: "Clouds 7", layers: 4 },
+    { folder: "Clouds 8", layers: 6 },
+];
+
+const scenes = sceneDefs.map((def) => {
+    const imgs = [];
+
+    for (let i = 1; i <= def.layers; i++) {
+        const img = new Image();
+        img.src = `images/Fondo/${def.folder}/${i}.png`;
+        imgs.push(img);
     }
-}
 
-function startWithDelay() {
-    resetGame();
-    let remaining = startDelay / 1000;
-    if (countdownEl) {
-        countdownEl.textContent = `Comienza en ${remaining}...`;
-    }
-    startCountdownInterval = setInterval(() => {
-        remaining -= 1;
-        if (remaining > 0) {
-            if (countdownEl) {
-                countdownEl.textContent = `Comienza en ${remaining}...`;
-            }
-            return;
-        }
-
-        clearInterval(startCountdownInterval);
-        startCountdownInterval = null;
-        if (countdownEl) {
-            countdownEl.textContent = "";
-        }
-        running = true;
-        lastSpawnTime = Date.now();
-    }, 1000);
-}
-
-restartButton?.addEventListener("click", () => {
-    startWithDelay();
+    return imgs;
 });
 
-// Evento: saltar con la barra espaciadora o flecha arriba
+let currentScene = 0;
+let nextScene = null;
+let lastSceneChange = Date.now();
+let fadeStart = 0;
+
+// ======================================================
+// SUELO
+// ======================================================
+
+const GROUND_Y = canvas.height - 70;
+
+const groundImg = new Image();
+groundImg.src = "images/Base/Base.png";
+
+const GROUND_SRC = {
+    x: 53,
+    y: 380,
+    w: 994,
+    h: 322,
+};
+
+const GROUND_TILE_H = canvas.height - GROUND_Y;
+
+const GROUND_TILE_W = Math.round(
+    GROUND_TILE_H * GROUND_SRC.w / GROUND_SRC.h
+);
+
+const DINO_FLOOR_OFFSET = 40;
+
+const DINO_FLOOR_Y =
+    GROUND_Y - 140 + DINO_FLOOR_OFFSET;
+
+// ======================================================
+// HITBOXES
+// ======================================================
+
+let showHitboxes = false;
+
+function getHitbox(entity) {
+    const hb = entity.hitbox || {
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+    };
+
+    return {
+        x: entity.x + hb.left,
+        y: entity.y + hb.top,
+        width:
+            entity.width - hb.left - hb.right,
+        height:
+            entity.height - hb.top - hb.bottom,
+    };
+}
+
+function drawHitbox(entity, color) {
+    const hb = getHitbox(entity);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+
+    ctx.strokeRect(
+        hb.x,
+        hb.y,
+        hb.width,
+        hb.height
+    );
+}
+
+// ======================================================
+// JUGADOR
+// ======================================================
+
+function createDino() {
+    return {
+        x: 50,
+        y: DINO_FLOOR_Y,
+        width: 140,
+        height: 140,
+        color: "green",
+
+        isJumping: false,
+        velocityY: 0,
+
+        jumpStrength: 14,
+        gravity: 0.6,
+
+        hitbox: {
+            left: 32,
+            right: 28,
+            top: 28,
+            bottom: 38,
+        },
+    };
+}
+
+let dino = createDino();
+
+// ======================================================
+// OBSTÁCULOS
+// ======================================================
+
+const obstacleTypes = [
+    {
+        name: "tronco",
+        src: "images/Obstaculos/Tronco.png",
+        frames: 1,
+        frameDuration: 0,
+        width: 90,
+        height: 90,
+
+        hitbox: {
+            left: 0.333,
+            right: 0.333,
+            top: 0.267,
+            bottom: 0.022,
+        },
+    },
+
+    {
+        name: "hongo",
+        src: "images/Obstaculos/Mushroom-Idle.png",
+        frames: 7,
+        frameDuration: 120,
+        width: 150,
+        height: 120,
+
+        hitbox: {
+            left: 0.42,
+            right: 0.42,
+            top: 0.6,
+            bottom: 0.05,
+        },
+    },
+
+    {
+        name: "volador",
+        src: "images/Obstaculos/FlyObstacle-Idle.png",
+        frames: 8,
+        frameDuration: 90,
+        width: 100,
+        height: 100,
+
+        yOffset: 120,
+
+        hitbox: {
+            left: 0.15,
+            right: 0.15,
+            top: 0.1,
+            bottom: 0.1,
+        },
+    },
+];
+
+for (const type of obstacleTypes) {
+    type.img = new Image();
+    type.img.src = type.src;
+}
+
+let obstacles = [];
+
+let obstacleSpeed = 5;
+
+let lastSpawnTime = 0;
+let nextSpawnDelay = 1500;
+
+const pendingSpawns = [];
+
+const VOLADOR_MIN_SCORE = 20;
+
+const obstacleWeights = {
+    tronco: 2.2,
+    hongo: 2.2,
+    volador: 1,
+};
+
+function rollNextSpawnDelay() {
+    const minGap =
+        Math.max(550, 1000 - score * 4);
+
+    const maxGap =
+        Math.max(1100, 2000 - score * 7);
+
+    return (
+        minGap +
+        Math.random() * (maxGap - minGap)
+    );
+}
+
+function pickRandomType() {
+    const pool = obstacleTypes.filter(
+        (t) =>
+            t.name !== "volador" ||
+            score >= VOLADOR_MIN_SCORE
+    );
+
+    const total = pool.reduce(
+        (sum, t) =>
+            sum + (obstacleWeights[t.name] || 1),
+        0
+    );
+
+    let r = Math.random() * total;
+
+    for (const t of pool) {
+        r -= obstacleWeights[t.name] || 1;
+
+        if (r <= 0) return t;
+    }
+
+    return pool[0];
+}
+
+function pushObstacle(type, now) {
+    const hb = {
+        left: type.hitbox.left * type.width,
+        right: type.hitbox.right * type.width,
+        top: type.hitbox.top * type.height,
+        bottom: type.hitbox.bottom * type.height,
+    };
+
+    const yOffset = type.yOffset || 0;
+
+    obstacles.push({
+        x: canvas.width,
+
+        y:
+            GROUND_Y -
+            type.height -
+            yOffset,
+
+        width: type.width,
+        height: type.height,
+
+        color: "brown",
+
+        hitbox: hb,
+
+        type,
+
+        frame: 0,
+        lastFrameChange: now,
+    });
+}
+
+// ======================================================
+// GAME STATE
+// ======================================================
+
+let score = 0;
+
+let running = false;
+let gameOver = false;
+
+const startDelay = 3000;
+
+// ======================================================
+// INPUT
+// ======================================================
+
 document.addEventListener("keydown", (e) => {
-    if ((e.code === "Space" || e.code === "ArrowUp") && running && dino.y === 150) {
-        dino.velocityY = -dino.jumpStrength;
+
+    if (
+        (e.code === "Space" ||
+            e.code === "ArrowUp") &&
+        running &&
+        dino.y === DINO_FLOOR_Y
+    ) {
+        dino.velocityY =
+            -dino.jumpStrength;
+
         dino.isJumping = true;
     }
+
+    if (e.code === "KeyH") {
+        showHitboxes = !showHitboxes;
+    }
 });
 
-// Función para actualizar la posición del dinosaurio
+// ======================================================
+// GAME LOGIC
+// ======================================================
+
+function updateScoreDisplay() {
+    scoreDisplay.textContent =
+        `Puntuación: ${score}`;
+}
+
+function resetGame() {
+
+    dino = createDino();
+
+    obstacles = [];
+
+    obstacleSpeed = 5;
+
+    lastSpawnTime = 0;
+
+    nextSpawnDelay = 1500;
+
+    score = 0;
+
+    running = false;
+    gameOver = false;
+
+    overlay.classList.add("hidden");
+
+    updateScoreDisplay();
+}
+
 function updateDino() {
-    // Aplicar gravedad y velocidad vertical para un salto
+
     dino.velocityY += dino.gravity;
+
     dino.y += dino.velocityY;
 
-    // Evitar que el dinosaurio caiga por debajo del suelo
-    if (dino.y > 150) {
-        dino.y = 150;
+    if (dino.y > DINO_FLOOR_Y) {
+
+        dino.y = DINO_FLOOR_Y;
+
         dino.velocityY = 0;
+
         dino.isJumping = false;
     }
 }
 
-// Función para generar obstáculos
 function spawnObstacle() {
-    if (!running) return;
+
     const now = Date.now();
-    if (lastSpawnTime === 0) {
-        lastSpawnTime = now;
+
+    for (
+        let i = pendingSpawns.length - 1;
+        i >= 0;
+        i--
+    ) {
+        if (now >= pendingSpawns[i].time) {
+
+            pushObstacle(
+                pendingSpawns[i].type,
+                now
+            );
+
+            pendingSpawns.splice(i, 1);
+        }
     }
-    if (now - lastSpawnTime > spawnInterval) {
-        obstacles.push({
-            x: canvas.width,
-            y: 150,
-            width: 20,
-            height: 40,
-            color: "brown",
-        });
+
+    if (
+        now - lastSpawnTime >
+        nextSpawnDelay
+    ) {
+
+        const type = pickRandomType();
+
+        pushObstacle(type, now);
+
         lastSpawnTime = now;
+
+        nextSpawnDelay =
+            rollNextSpawnDelay();
+
+        if (
+            type.name !== "volador" &&
+            score >= VOLADOR_MIN_SCORE &&
+            Math.random() < 0.45
+        ) {
+
+            const flyType =
+                obstacleTypes.find(
+                    (t) =>
+                        t.name === "volador"
+                );
+
+            if (flyType) {
+
+                const delay =
+                    380 +
+                    Math.random() * 260;
+
+                pendingSpawns.push({
+                    time: now + delay,
+                    type: flyType,
+                });
+            }
+        }
     }
 }
 
-// Función para actualizar la posición de los obstáculos
 function updateObstacles() {
-    for (let i = obstacles.length - 1; i >= 0; i--) {
+
+    for (
+        let i = obstacles.length - 1;
+        i >= 0;
+        i--
+    ) {
+
         obstacles[i].x -= obstacleSpeed;
-        if (obstacles[i].x + obstacles[i].width < 0) {
+
+        if (
+            obstacles[i].x +
+                obstacles[i].width <
+            0
+        ) {
+
             obstacles.splice(i, 1);
-            score++;            // Incrementar puntuación por cada obstáculo que se sale
+
+            score++;
+
             updateScoreDisplay();
         }
     }
 
-    // dificultad: aumentar velocidad y frecuencia de obstáculos cada cierto puntaje
-    while (score - lastDifficultyIncrease >= difficultyStep) { // si la puntuación ha superado el último paso de dificultad
-        obstacleSpeed += 0.15;
-        spawnInterval = Math.max(minSpawnInterval, spawnInterval - 75); // reducir spawn menos agresivamente
-        lastDifficultyIncrease += difficultyStep;
-    }
+    obstacleSpeed =
+        Math.min(11, 5 + score * 0.05);
 }
 
-// Función para detectar colisiones
 function checkCollision() {
-    for (let obstacle of obstacles) { // for of para iterar sobre cada obstáculo
+
+    const d = getHitbox(dino);
+
+    for (let obstacle of obstacles) {
+
+        const o = getHitbox(obstacle);
+
         if (
-            dino.x < obstacle.x + obstacle.width &&
-            dino.x + dino.width > obstacle.x &&
-            dino.y < obstacle.y + obstacle.height &&
-            dino.y + dino.height > obstacle.y
+            d.x < o.x + o.width &&
+            d.x + d.width > o.x &&
+            d.y < o.y + o.height &&
+            d.y + d.height > o.y
         ) {
-            if (gameOver) return;
-            gameOver = true;
-            running = false;
-            finalScore.textContent = `Puntuación: ${score}`;
-            showOverlay();
-            return;
+            endGame();
         }
     }
 }
 
-// Función para dibujar el juego
+function endGame() {
+
+    if (gameOver) return;
+
+    gameOver = true;
+
+    running = false;
+
+    finalScore.textContent =
+        `Puntuación: ${score}`;
+
+    saveScore();
+
+    overlay.classList.remove("hidden");
+}
+
+// ======================================================
+// DRAW
+// ======================================================
+
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar el lienzo
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    // Escenas
+
+    const nowScene = Date.now();
+
+    if (
+        nextScene === null &&
+        nowScene - lastSceneChange >=
+            SCENE_DURATION_MS
+    ) {
+
+        nextScene =
+            (currentScene + 1) %
+            scenes.length;
+
+        fadeStart = nowScene;
+    }
+
+    function drawScene(idx, alpha) {
+
+        ctx.globalAlpha = alpha;
+
+        for (const layer of scenes[idx]) {
+
+            if (
+                layer.complete &&
+                layer.naturalWidth > 0
+            ) {
+
+                ctx.drawImage(
+                    layer,
+                    0,
+                    0,
+                    canvas.width,
+                    canvas.height
+                );
+            }
+        }
+
+        ctx.globalAlpha = 1;
+    }
+
+    if (nextScene !== null) {
+
+        const t = Math.min(
+            1,
+            (nowScene - fadeStart) /
+                SCENE_FADE_MS
+        );
+
+        drawScene(currentScene, 1 - t);
+
+        drawScene(nextScene, t);
+
+        if (t >= 1) {
+
+            currentScene = nextScene;
+
+            nextScene = null;
+
+            lastSceneChange = nowScene;
+        }
+
+    } else {
+
+        drawScene(currentScene, 1);
+    }
+
+    // Suelo
+
+    if (
+        groundImg.complete &&
+        groundImg.naturalWidth > 0
+    ) {
+
+        const overlapX = 18;
+        const overlapY = 12;
+
+        const step =
+            GROUND_TILE_W - overlapX;
+
+        const drawY = GROUND_Y - 2;
+
+        const drawH =
+            canvas.height -
+            drawY +
+            overlapY;
+
+        for (
+            let x = -overlapX;
+            x < canvas.width;
+            x += step
+        ) {
+
+            ctx.drawImage(
+                groundImg,
+
+                GROUND_SRC.x,
+                GROUND_SRC.y,
+                GROUND_SRC.w,
+                GROUND_SRC.h,
+
+                x,
+                drawY,
+
+                GROUND_TILE_W,
+                drawH
+            );
+        }
+    }
+
+    // Dino animado
 
     const now = Date.now();
-    if (now - lastFrameChange >= frameDuration) {
-        currentDinoFrame = (currentDinoFrame + 1) % dinoFrames.length;
+
+    if (
+        now - lastFrameChange >=
+        frameDuration
+    ) {
+
+        currentDinoFrame =
+            (currentDinoFrame + 1) %
+            dinoFrames.length;
+
         lastFrameChange = now;
     }
 
-    const activeDinoFrame = dinoFrames[currentDinoFrame];
+    const activeDinoFrame =
+        dinoFrames[currentDinoFrame];
 
-    // Dibujar el dinosaurio
-    if (activeDinoFrame.complete && activeDinoFrame.naturalWidth > 0) {
-        ctx.drawImage(activeDinoFrame, dino.x, dino.y, dino.width, dino.height);
+    if (
+        activeDinoFrame.complete &&
+        activeDinoFrame.naturalWidth > 0
+    ) {
+
+        ctx.drawImage(
+            activeDinoFrame,
+
+            dino.x,
+            dino.y,
+
+            dino.width,
+            dino.height
+        );
+
     } else {
+
         ctx.fillStyle = dino.color;
-        ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+
+        ctx.fillRect(
+            dino.x,
+            dino.y,
+            dino.width,
+            dino.height
+        );
     }
 
-    // Dibujar los obstáculos
+    // Obstáculos
+
+    const nowDraw = Date.now();
+
     for (let obstacle of obstacles) {
-        if (obstacleImg.complete && obstacleImg.naturalWidth > 0) {
-            ctx.drawImage(obstacleImg, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+        const type = obstacle.type;
+
+        if (
+            type &&
+            type.frames > 1 &&
+            type.frameDuration > 0
+        ) {
+
+            if (
+                nowDraw -
+                    obstacle.lastFrameChange >=
+                type.frameDuration
+            ) {
+
+                obstacle.frame =
+                    (obstacle.frame + 1) %
+                    type.frames;
+
+                obstacle.lastFrameChange =
+                    nowDraw;
+            }
+        }
+
+        const img = type ? type.img : null;
+
+        if (
+            img &&
+            img.complete &&
+            img.naturalWidth > 0
+        ) {
+
+            if (type.frames > 1) {
+
+                const fw =
+                    img.naturalWidth /
+                    type.frames;
+
+                const fh =
+                    img.naturalHeight;
+
+                ctx.drawImage(
+                    img,
+
+                    obstacle.frame * fw,
+                    0,
+
+                    fw,
+                    fh,
+
+                    obstacle.x,
+                    obstacle.y,
+
+                    obstacle.width,
+                    obstacle.height
+                );
+
+            } else {
+
+                ctx.drawImage(
+                    img,
+
+                    obstacle.x,
+                    obstacle.y,
+
+                    obstacle.width,
+                    obstacle.height
+                );
+            }
+
         } else {
-            ctx.fillStyle = obstacle.color;
-            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+            ctx.fillStyle =
+                obstacle.color;
+
+            ctx.fillRect(
+                obstacle.x,
+                obstacle.y,
+                obstacle.width,
+                obstacle.height
+            );
         }
     }
 
-    // Dibujar la puntuación
+    // Hitboxes
+
+    if (showHitboxes) {
+
+        drawHitbox(dino, "lime");
+
+        for (let obstacle of obstacles) {
+            drawHitbox(obstacle, "red");
+        }
+    }
+
+    // Texto score
+
     ctx.fillStyle = "white";
+
     ctx.font = "20px Arial";
-    ctx.fillText(`Puntuación: ${score}`, 10, 30);
+
+    ctx.fillText(
+        `Puntuación: ${score}`,
+        10,
+        30
+    );
+
+    if (showHitboxes) {
+
+        ctx.fillText(
+            "Hitboxes ON (H)",
+            10,
+            55
+        );
+    }
 }
 
-// Bucle del juego
+// ======================================================
+// LOOP
+// ======================================================
+
 function gameLoop() {
+
     if (running) {
+
         updateDino();
+
         spawnObstacle();
+
         updateObstacles();
+
         checkCollision();
     }
 
     draw();
-    requestAnimationFrame(gameLoop); // Llamar al siguiente frame
+
+    requestAnimationFrame(gameLoop);
 }
 
+// ======================================================
+// START
+// ======================================================
+
+function startWithDelay() {
+
+    resetGame();
+
+    let remaining =
+        startDelay / 1000;
+
+    countdownEl.textContent =
+        `Comienza en ${remaining}...`;
+
+    const interval = setInterval(() => {
+
+        remaining--;
+
+        if (remaining > 0) {
+
+            countdownEl.textContent =
+                `Comienza en ${remaining}...`;
+
+        } else {
+
+            clearInterval(interval);
+
+            countdownEl.textContent = "";
+
+            running = true;
+
+            lastSpawnTime = Date.now();
+        }
+
+    }, 1000);
+}
+
+restartButton.addEventListener(
+    "click",
+    startWithDelay
+);
+
+// ======================================================
+// INIT
+// ======================================================
+
 updateScoreDisplay();
+
+renderScoreTable();
+
 gameLoop();
+
 startWithDelay();
-fetchScores();
