@@ -18,37 +18,40 @@ Estructura de archivos
 - `style.css` — estilos CSS globales.
 - `script.js` — lógica de cliente (JavaScript).
 
-
 Requisitos
 ---------
 
-- Node.js >= 14 (para ejecutar el servidor y persistir puntuaciones).
 - Navegador moderno (Chrome, Edge, Firefox, Safari).
+- Para desarrollo con recarga: `Live Server` (extensión de VS Code) o `http-server`/`serve` de npm.
 
 Cómo ejecutar localmente
 ------------------------
 
-Opción 1 — Correr servidor local (recomendado)
+Opción 1 — Abrir directamente
 
-1. Instala dependencias:
+- Abre `index.html` con doble clic o arrástralo al navegador.
+
+Opción 2 — Usar Live Server (recomendado durante desarrollo)
+
+- Si usas Visual Studio Code instala la extensión `Live Server`.
+- Abre la carpeta del proyecto en VS Code y pulsa `Go Live` en la esquina inferior.
+
+Opción 3 — Servidor HTTP rápido con npm
+
+- Si tienes Node.js instalado, puedes usar `http-server` o `serve`:
 
 ```powershell
-npm install
+npm install -g http-server
+http-server . -c-1
 ```
 
-2. Inicia el servidor:
+o
 
 ```powershell
-npm start
+npx serve .
 ```
 
-3. Abre `http://localhost:3000` en tu navegador.
-
-El servidor sirve los archivos estáticos del proyecto y expone una API simple para guardar y leer puntuaciones en `scores.txt`.
-
-Opción 2 — Abrir directamente (sin scoreboard persistente)
-
-- Abre `index.html` con doble clic o arrástralo al navegador. Nota: en este modo el scoreboard que intenta enviar/leer puntuaciones al servidor fallará porque no hay backend.
+Esto servirá los archivos en `http://localhost:8080` (o puerto alternativo mostrado en consola).
 
 Desarrollo
 ---------
@@ -64,27 +67,12 @@ Buenas prácticas
 - Encapsula la lógica de UI en funciones en `script.js`.
 - Usa comentarios claros y descriptivos para facilitar colaboración.
 
-
 Contribuir
 ---------
 
 - Haz un fork y crea una rama con un nombre descriptivo.
 - Abre un pull request describiendo los cambios y su propósito.
 - Para pequeñas correcciones (typos, documentación) puedes crear PR directo a `main`.
-
-Detalles técnicos añadidos
-------------------------
-
-- Delay inicial: el juego espera 3 segundos antes de empezar y mostrar el primer obstáculo.
-- Reinicio limpio: al morir se muestra un overlay con la puntuación y un botón `Reiniciar` que reinicia el juego desde el comienzo (no recarga la página).
-- Scoreboard: las puntuaciones se guardan en `scores.txt` en formato JSON. El servidor (`server.js`) expone `GET /scores` y `POST /scores`.
-
-Archivos nuevos relevantes
--------------------------
-
-- `server.js` — servidor Express que sirve la app y persiste puntuaciones.
-- `package.json` — dependencias y script `start`.
-- `scores.txt` — archivo con el historial de puntuaciones (JSON).
 
 Licencia
 --------

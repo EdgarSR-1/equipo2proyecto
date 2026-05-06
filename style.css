@@ -1,68 +1,65 @@
 body {
   margin: 0;
   background: #111;
-  color: #fff; /* Fixes invisible text on dark background */
-  font-family: Arial, sans-serif;
   display: flex;
-  flex-direction: column; /* Stacks the canvas and HUD vertically */
   justify-content: center;
   align-items: center;
   height: 100vh;
+  flex-direction: column;
+}
+
+.title {
+  color: #fff;
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.game-container {
+  position: relative;
 }
 
 canvas {
   border: 2px solid #fff;
-<<<<<<< Updated upstream
-  background: #000;
-  margin-bottom: 15px;
-=======
   background: linear-gradient(#87ceeb, #c8e9f5);
   display: block;
->>>>>>> Stashed changes
 }
 
-/* CRITICAL FIX: Hides the Game Over overlay when the game is running */
-.hidden {
-  display: none !important;
-}
-
-/* UI Adjustments for a cleaner look */
-#hud {
-  display: flex;
-  justify-content: space-between;
-  width: 800px; /* Matches canvas width */
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-#overlay {
+.game-over-box {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.9);
-  padding: 30px;
+  background: rgba(25, 25, 25, 0.95);
   border: 2px solid #fff;
   border-radius: 10px;
+  padding: 20px 24px;
+  color: #fff;
   text-align: center;
+  min-width: 220px;
 }
 
-button {
-  padding: 10px 20px;
-  font-size: 1rem;
-  cursor: pointer;
-  background: #fff;
-  color: #000;
+.game-over-box h2 {
+  margin: 0 0 10px;
+}
+
+.game-over-box p {
+  margin: 0 0 14px;
+}
+
+.game-over-box button {
+  background: #2e7d32;
+  color: #fff;
   border: none;
-  font-weight: bold;
-  margin-top: 10px;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
 }
 
-button:hover {
-  background: #ddd;
+.game-over-box button:hover {
+  background: #1b5e20;
 }
 
-#scoreboardList {
-  text-align: left;
-  margin-top: 15px;
+.hidden {
+  display: none;
 }
