@@ -1,67 +1,163 @@
 // Juego del dinosaurio
-// Control principal: dibujo, lógica de colisión, spawn de obstáculos y puntuación.
+// Explicación: Controlas a un capibara que corre y salta para evitar obstáculos.
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
+const finalScore = document.getElementById("finalScore");
+const restartButton = document.getElementById("restartBtn") || document.getElementById("restartButton");
+const scoreDisplay = document.getElementById("scoreDisplay");
+const countdownEl = document.getElementById("countdown");
+
+const dinoFrames = [];
+const dinoFrame1 = new Image();
+dinoFrame1.src = "images/Capybara/CapybaraRun-1.png";
+const dinoFrame2 = new Image();
+dinoFrame2.src = "images/Capybara/CapybaraRun-2.png";
+dinoFrames.push(dinoFrame1, dinoFrame2);
+
+let currentDinoFrame = 0;
+let lastFrameChange = 0;
+const frameDuration = 120;
+
+const obstacleImg = new Image();
+obstacleImg.src = "images/Capybara/CapybaraRun-1.png";
+
+const scoreStorageKey = "dinoGameScores";
+const maxScores = 5;
+
+const scoreTableBody = document.getElementById("scoreTableBody");
+
+let scoreHistory = loadScoreHistory();
 
 // Ajustes del lienzo
 canvas.width = 800;
-canvas.height = 200;
+canvas.height = 400;
 
-// Elementos UI (HUD y overlay)
-const scoreDisplay = document.getElementById("scoreDisplay");
-const overlay = document.getElementById("overlay");
-const finalScore = document.getElementById("finalScore");
-const restartBtn = document.getElementById("restartBtn");
-const countdownEl = document.getElementById("countdown");
-const scoreboardList = document.getElementById("scoreboardList");
-
-// Crear objeto dinosaurio con propiedades físicas y visuales
-let dino = createDino();
+// Configuración del personaje
 function createDino() {
     return {
-        x: 50, // posición horizontal fija
-        y: 150, // posición vertical inicial (sobre el suelo)
-        width: 40,
-        height: 40,
+        x: 50,
+        y: 150,
+        width: 90,
+        height: 90,
         color: "green",
         isJumping: false,
-        velocityY: 0, // velocidad vertical
+        velocityY: 0,
         jumpStrength: 12,
         gravity: 0.6,
     };
 }
 
-// Configuración de los obstáculos y dificultad
-let obstacles = [];
-const initialObstacleSpeed = 5; // velocidad inicial de obstáculos
-let obstacleSpeed = initialObstacleSpeed;
-const initialSpawnInterval = 1500; // ms entre obstáculos al inicio
-let spawnInterval = initialSpawnInterval;
-let lastSpawnTime = 0; // timestamp del último spawn
-let lastDifficultyIncrease = 0; // marcador para controlar subidas de dificultad
-const difficultyStep = 20; // puntos para cada aumento de dificultad
-const minSpawnInterval = 700; // límite inferior para spawnInterval
+let dino = createDino();
 
-// Puntuación (se incrementa cuando un obstáculo sale por la izquierda)
+// Configuración de los obstáculos
+let obstacles = [];                         // Lista de obstáculos activos
+const initialObstacleSpeed = 5;             // Velocidad en pixeles por frame al inicio
+let obstacleSpeed = initialObstacleSpeed;   // Velocidad actual de los obstáculos (aumenta con la puntuación)
+const initialSpawnInterval = 1500;          // Tiempo en ms entre spawns de obstáculos al inicio
+let spawnInterval = initialSpawnInterval;   // Tiempo actual entre spawns (disminuye con la puntuación)
+let lastSpawnTime = 0;                      // Tiempo desde último spawn de obstáculo
+let lastDifficultyIncrease = 0;             // Puntuación en la que se hizo el último aumento de dificultad
+const difficultyStep = 20;                  // Puntos necesarios para cada aumento de dificultad
+const minSpawnInterval = 700;               // Tiempo mínimo entre spawns (límite inferior para spawnInterval)
+
+// Puntuación y estado
 let score = 0;
-
-// Estado del juego
-let running = false; // true mientras el juego corre
-let gameOver = false; // true después de colisión
-
-// Delay inicial antes de empezar (ms) — requisito: 3 segundos
+let gameOver = false;
+let running = false;
+let startCountdownInterval = null;
 const startDelay = 3000;
 
-// Evento de teclado: saltar si el juego está en curso y el dino está en el suelo
-document.addEventListener("keydown", (e) => {
-    if ((e.code === "Space" || e.code === "ArrowUp") && dino.y === 150 && running) {
-        dino.velocityY = -dino.jumpStrength;
-        dino.isJumping = true;
+function updateScoreDisplay() {
+    if (scoreDisplay) {
+        scoreDisplay.textContent = `Puntuación: ${score}`;
     }
-});
+}
 
-// Reiniciar estado del juego a valores iniciales sin recargar la página
+function hideOverlay() {
+    if (overlay) {
+        overlay.classList.add("hidden");
+    }
+}
+
+function showOverlay() {
+    if (overlay) {
+        overlay.classList.remove("hidden");
+    }
+}
+
+function saveScore() {
+    scoreHistory.unshift(score);
+
+    scoreHistory = scoreHistory
+        .sort((firstScore, secondScore) => secondScore - firstScore)
+        .slice(0, maxScores);
+
+    saveScoreHistory();
+    renderScoreTable();
+}
+
+function loadScoreHistory() {
+    try {
+        const storedScores = localStorage.getItem(scoreStorageKey);
+
+        if (!storedScores) {
+            return [];
+        }
+
+        const parsedScores = JSON.parse(storedScores);
+
+        if (!Array.isArray(parsedScores)) {
+            return [];
+        }
+
+        return parsedScores.filter((scoreValue) =>
+            Number.isFinite(scoreValue)
+        );
+    } catch (error) {
+        return [];
+    }
+}
+
+function saveScoreHistory() {
+    try {
+        localStorage.setItem(
+            scoreStorageKey,
+            JSON.stringify(scoreHistory)
+        );
+    } catch (error) {
+        console.warn("No se pudo guardar el score");
+    }
+}
+
+function renderScoreTable() {
+    scoreTableBody.innerHTML = "";
+
+    const rankedScores = [...scoreHistory].sort(
+        (firstScore, secondScore) => secondScore - firstScore
+    );
+
+    if (rankedScores.length === 0) {
+        const emptyRow = document.createElement("tr");
+
+        emptyRow.innerHTML =
+            `<td colspan="2">Sin partidas aún</td>`;
+
+        scoreTableBody.appendChild(emptyRow);
+        return;
+    }
+
+    rankedScores.forEach((points, index) => {
+        const row = document.createElement("tr");
+
+        row.innerHTML =
+            `<td>${index + 1}</td><td>${points}</td>`;
+
+        scoreTableBody.appendChild(row);
+    });
+}
+
 function resetGame() {
     dino = createDino();
     obstacles = [];
@@ -70,18 +166,61 @@ function resetGame() {
     lastSpawnTime = 0;
     lastDifficultyIncrease = 0;
     score = 0;
-    running = false;
     gameOver = false;
-    overlay.classList.add("hidden");
+    running = false;
     updateScoreDisplay();
+    finalScore.textContent = "Puntuación: 0";
+    hideOverlay();
+    if (startCountdownInterval) {
+        clearInterval(startCountdownInterval);
+        startCountdownInterval = null;
+    }
 }
 
-// Actualizar física del dinosaurio: gravedad y posición vertical
+function startWithDelay() {
+    resetGame();
+    let remaining = startDelay / 1000;
+    if (countdownEl) {
+        countdownEl.textContent = `Comienza en ${remaining}...`;
+    }
+    startCountdownInterval = setInterval(() => {
+        remaining -= 1;
+        if (remaining > 0) {
+            if (countdownEl) {
+                countdownEl.textContent = `Comienza en ${remaining}...`;
+            }
+            return;
+        }
+
+        clearInterval(startCountdownInterval);
+        startCountdownInterval = null;
+        if (countdownEl) {
+            countdownEl.textContent = "";
+        }
+        running = true;
+        lastSpawnTime = Date.now();
+    }, 1000);
+}
+
+restartButton?.addEventListener("click", () => {
+    startWithDelay();
+});
+
+// Evento: saltar con la barra espaciadora o flecha arriba
+document.addEventListener("keydown", (e) => {
+    if ((e.code === "Space" || e.code === "ArrowUp") && running && dino.y === 150) {
+        dino.velocityY = -dino.jumpStrength;
+        dino.isJumping = true;
+    }
+});
+
+// Función para actualizar la posición del dinosaurio
 function updateDino() {
+    // Aplicar gravedad y velocidad vertical para un salto
     dino.velocityY += dino.gravity;
     dino.y += dino.velocityY;
 
-    // Mantener en el suelo y resetear estado de salto
+    // Evitar que el dinosaurio caiga por debajo del suelo
     if (dino.y > 150) {
         dino.y = 150;
         dino.velocityY = 0;
@@ -89,11 +228,13 @@ function updateDino() {
     }
 }
 
-// Generar obstáculos periódicamente; no genera si el juego no está en ejecución
+// Función para generar obstáculos
 function spawnObstacle() {
     if (!running) return;
     const now = Date.now();
-    if (lastSpawnTime === 0) lastSpawnTime = now; // asegurar que el primer spawn respete spawnInterval
+    if (lastSpawnTime === 0) {
+        lastSpawnTime = now;
+    }
     if (now - lastSpawnTime > spawnInterval) {
         obstacles.push({
             x: canvas.width,
@@ -106,76 +247,81 @@ function spawnObstacle() {
     }
 }
 
-// Mover obstáculos y aumentar puntuación cuando se salen del canvas
+// Función para actualizar la posición de los obstáculos
 function updateObstacles() {
     for (let i = obstacles.length - 1; i >= 0; i--) {
         obstacles[i].x -= obstacleSpeed;
         if (obstacles[i].x + obstacles[i].width < 0) {
             obstacles.splice(i, 1);
-            score++; // gana punto por cada obstáculo esquivado
+            score++;            // Incrementar puntuación por cada obstáculo que se sale
             updateScoreDisplay();
         }
     }
 
-    // Aumentar dificultad de forma escalonada según la puntuación
-    while (score - lastDifficultyIncrease >= difficultyStep) {
+    // dificultad: aumentar velocidad y frecuencia de obstáculos cada cierto puntaje
+    while (score - lastDifficultyIncrease >= difficultyStep) { // si la puntuación ha superado el último paso de dificultad
         obstacleSpeed += 0.15;
-        spawnInterval = Math.max(minSpawnInterval, spawnInterval - 75);
+        spawnInterval = Math.max(minSpawnInterval, spawnInterval - 75); // reducir spawn menos agresivamente
         lastDifficultyIncrease += difficultyStep;
     }
 }
 
-// Detectar colisiones entre jugador y cualquier obstáculo
+// Función para detectar colisiones
 function checkCollision() {
-    for (let obstacle of obstacles) {
+    for (let obstacle of obstacles) { // for of para iterar sobre cada obstáculo
         if (
             dino.x < obstacle.x + obstacle.width &&
             dino.x + dino.width > obstacle.x &&
             dino.y < obstacle.y + obstacle.height &&
             dino.y + dino.height > obstacle.y
         ) {
-            endGame(); // manejar fin de partida sin recargar la página
+            if (gameOver) return;
+            gameOver = true;
+            running = false;
+            finalScore.textContent = `Puntuación: ${score}`;
+            showOverlay();
+            return;
         }
     }
 }
 
-// Dibujar todos los elementos del juego en el canvas
+// Función para dibujar el juego
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar el lienzo
 
-    // Jugador
-    ctx.fillStyle = dino.color;
-    ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
-
-    // Obstáculos
-    for (let obstacle of obstacles) {
-        ctx.fillStyle = obstacle.color;
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    const now = Date.now();
+    if (now - lastFrameChange >= frameDuration) {
+        currentDinoFrame = (currentDinoFrame + 1) % dinoFrames.length;
+        lastFrameChange = now;
     }
 
-    // Puntuación en el canvas (complemento del HUD)
-    ctx.fillStyle = "black";
+    const activeDinoFrame = dinoFrames[currentDinoFrame];
+
+    // Dibujar el dinosaurio
+    if (activeDinoFrame.complete && activeDinoFrame.naturalWidth > 0) {
+        ctx.drawImage(activeDinoFrame, dino.x, dino.y, dino.width, dino.height);
+    } else {
+        ctx.fillStyle = dino.color;
+        ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+    }
+
+    // Dibujar los obstáculos
+    for (let obstacle of obstacles) {
+        if (obstacleImg.complete && obstacleImg.naturalWidth > 0) {
+            ctx.drawImage(obstacleImg, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        } else {
+            ctx.fillStyle = obstacle.color;
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        }
+    }
+
+    // Dibujar la puntuación
+    ctx.fillStyle = "white";
     ctx.font = "20px Arial";
-    ctx.fillText("Puntuación: " + score, 10, 30);
+    ctx.fillText(`Puntuación: ${score}`, 10, 30);
 }
 
-// Actualizar texto del HUD con la puntuación actual
-function updateScoreDisplay() {
-    scoreDisplay.textContent = `Puntuación: ${score}`;
-}
-
-// Manejo de fin de juego: mostrar overlay, enviar score y actualizar scoreboard
-function endGame() {
-    if (gameOver) return;
-    gameOver = true;
-    running = false;
-    finalScore.textContent = `Puntuación: ${score}`;
-    overlay.classList.remove("hidden");
-    // Intentar enviar la puntuación al servidor; si falla, igualmente actualizamos visualmente
-    submitScore(score).then(fetchScores).catch(() => fetchScores());
-}
-
-// Bucle principal: si `running` está activo actualiza la lógica, siempre dibuja
+// Bucle del juego
 function gameLoop() {
     if (running) {
         updateDino();
@@ -183,70 +329,12 @@ function gameLoop() {
         updateObstacles();
         checkCollision();
     }
+
     draw();
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(gameLoop); // Llamar al siguiente frame
 }
 
-// Iniciar el juego después de un delay visual de 3 segundos (countdown)
-function startWithDelay() {
-    resetGame();
-    let remaining = startDelay / 1000;
-    countdownEl.textContent = `Comienza en ${remaining}...`;
-    let interval = setInterval(() => {
-        remaining -= 1;
-        if (remaining > 0) {
-            countdownEl.textContent = `Comienza en ${remaining}...`;
-        } else {
-            clearInterval(interval);
-            countdownEl.textContent = "";
-            running = true;
-            lastSpawnTime = Date.now(); // marcar inicio para spawn
-        }
-    }, 1000);
-}
-
-// Reiniciar al hacer clic en el botón de overlay
-restartBtn.addEventListener("click", () => {
-    startWithDelay();
-});
-
-// Enviar la puntuación al servidor usando la API POST /scores
-async function submitScore(value) {
-    try {
-        await fetch('/scores', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ score: value, time: Date.now() })
-        });
-    } catch (e) {
-        console.warn('No se pudo enviar score al servidor', e);
-    }
-}
-
-// Obtener la lista de puntuaciones ordenadas desde el servidor
-async function fetchScores() {
-    try {
-        const res = await fetch('/scores');
-        if (!res.ok) throw new Error('No hay respuesta');
-        const data = await res.json();
-        renderScoreboard(data);
-    } catch (e) {
-        console.warn('No se pudo obtener scoreboard', e);
-        scoreboardList.innerHTML = '';
-    }
-}
-
-// Renderizar la lista en el overlay (Top 10)
-function renderScoreboard(list) {
-    scoreboardList.innerHTML = '';
-    list.slice(0, 10).forEach(item => {
-        const li = document.createElement('li');
-        const date = new Date(item.time).toLocaleString();
-        li.textContent = `${item.score} — ${date}`;
-        scoreboardList.appendChild(li);
-    });
-}
-
-// Iniciar bucle y arrancar con el delay inicial
+updateScoreDisplay();
 gameLoop();
 startWithDelay();
+fetchScores();

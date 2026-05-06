@@ -1,63 +1,127 @@
 body {
   margin: 0;
-  background: #111;
-  color: #fff; /* Fixes invisible text on dark background */
-  font-family: Arial, sans-serif;
+  background: linear-gradient(180deg, #1f2430 0%, #111 100%);
   display: flex;
-  flex-direction: column; /* Stacks the canvas and HUD vertically */
   justify-content: center;
   align-items: center;
   height: 100vh;
+  flex-direction: column;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #fff;
+}
+
+.title {
+  color: #fff;
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+#gameContainer,
+.game-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 canvas {
   border: 2px solid #fff;
   background: #000;
-  margin-bottom: 15px;
+  display: block;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
 }
 
-/* CRITICAL FIX: Hides the Game Over overlay when the game is running */
-.hidden {
-  display: none !important;
-}
-
-/* UI Adjustments for a cleaner look */
 #hud {
+  width: 800px;
   display: flex;
   justify-content: space-between;
-  width: 800px; /* Matches canvas width */
-  font-size: 1.2rem;
-  font-weight: bold;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
 }
 
-#overlay {
+#scoreDisplay,
+#countdown {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.game-over-box {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.9);
-  padding: 30px;
+  background: rgba(25, 25, 25, 0.95);
   border: 2px solid #fff;
   border-radius: 10px;
+  padding: 20px 24px;
+  color: #fff;
   text-align: center;
+  min-width: 220px;
 }
 
-button {
-  padding: 10px 20px;
-  font-size: 1rem;
-  cursor: pointer;
-  background: #fff;
-  color: #000;
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 20;
+}
+
+#overlay.hidden {
+  display: none;
+}
+
+.game-over-box h2 {
+  margin: 0 0 10px;
+}
+
+.game-over-box p {
+  margin: 0 0 14px;
+}
+
+.game-over-box button {
+  background: #2e7d32;
+  color: #fff;
   border: none;
-  font-weight: bold;
-  margin-top: 10px;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
 }
 
-button:hover {
-  background: #ddd;
+.game-over-box button:hover {
+  background: #1b5e20;
 }
 
 #scoreboardList {
+  margin: 12px 0 0;
+  padding-left: 20px;
   text-align: left;
-  margin-top: 15px;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.hidden {
+  display: none;
+}
+
+#scoreTable {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+}
+
+#scoreTable th,
+#scoreTable td {
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 6px;
+  text-align: center;
 }
