@@ -1,4 +1,4 @@
-# Capibara Underground
+# Capy Rush
 
 Juego 2D estilo endless runner hecho con HTML, CSS y JavaScript. Controlas un capibara que debe esquivar obstáculos para sumar puntos mientras la dificultad aumenta con el tiempo.
 
