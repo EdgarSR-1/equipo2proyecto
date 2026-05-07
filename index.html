@@ -5,7 +5,10 @@
     <title>Juego del Dinosaurio</title>
     <link rel="stylesheet" href="style.css" />
   </head>
+
   <body>
+    <h1 class="title">Capibara Underground</h1>
+
     <!-- Contenedor principal del juego -->
     <div id="gameContainer" class="game-container">
       <!-- Lienzo donde se dibuja el juego -->
@@ -16,28 +19,30 @@
         <div id="scoreDisplay">Puntuación: 0</div>
         <div id="countdown"></div>
       </div>
-    </div>
 
-    <!-- Overlay Game Over -->
-    <div id="overlay" class="hidden">
-      <div id="gameOverBox" class="game-over-box">
-        <h2 id="gameOverTitle">Game Over</h2>
-        <p id="finalScore">Puntuación: 0</p>
+      <!-- Overlay Game Over -->
+      <div id="overlay" class="hidden">
+        <div id="gameOverBox" class="game-over-box">
+          <h2 id="gameOverTitle">Game Over</h2>
 
-        <button id="restartBtn">Reiniciar</button>
+          <p id="finalScore">Puntuación: 0</p>
 
-        <!-- Tabla de scores -->
-        <h3>Mejores puntuaciones</h3>
+          <button id="restartBtn">Reiniciar</button>
 
-        <table id="scoreTable">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Puntos</th>
-            </tr>
-          </thead>
-          <tbody id="scoreTableBody"></tbody>
-        </table>
+          <!-- Tabla de scores -->
+          <h3>Mejores puntuaciones</h3>
+
+          <table id="scoreTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Puntos</th>
+              </tr>
+            </thead>
+
+            <tbody id="scoreTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 

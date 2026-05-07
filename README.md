@@ -15,71 +15,79 @@ Un juego estilo "dinosaurio Chrome" donde controlas un capibara saltador que deb
 
 ## Estructura de archivos
 
-- `index.html` — estructura HTML con canvas, HUD y overlay.
-- `style.css` — estilos CSS.
-- `script.js` — lógica del juego (movimiento, colisiones, puntuaciones).
-- `images/` — carpeta con sprites (capibara corriendo, obstáculos).
+- `index.html` — entrada principal de la aplicación.
+- `style.css` — estilos CSS globales.
+- `script.js` — lógica de cliente (JavaScript).
 
 
-## Requisitos
+Requisitos
+---------
 
+- Node.js >= 14 (para ejecutar el servidor y persistir puntuaciones).
 - Navegador moderno (Chrome, Edge, Firefox, Safari).
-- **Nota**: no se requiere Node.js ni servidor backend.
-
-## Cómo ejecutar localmente
-
-### Opción 1 — Abrir directamente (más simple)
 
 1. Haz doble clic en `index.html` o arrástralo al navegador.
 2. El juego se inicia automáticamente con un delay de 3 segundos.
 
-### Opción 2 — Servidor HTTP local (recomendado para desarrollo)
+Opción 1 — Correr servidor local (recomendado)
 
-Si tienes Node.js instalado, puedes servir los archivos con un servidor HTTP:
+1. Instala dependencias:
 
 ```powershell
-npx http-server . -c-1 -p 8080
+npm install
 ```
 
 o
 
 ```powershell
-npx serve .
+npm start
 ```
 
-Luego abre `http://localhost:8080` (o el puerto mostrado en consola).
+3. Abre `http://localhost:3000` en tu navegador.
+
+El servidor sirve los archivos estáticos del proyecto y expone una API simple para guardar y leer puntuaciones en `scores.txt`.
+
+Opción 2 — Abrir directamente (sin scoreboard persistente)
+
+- Abre `index.html` con doble clic o arrástralo al navegador. Nota: en este modo el scoreboard que intenta enviar/leer puntuaciones al servidor fallará porque no hay backend.
 
 ## Desarrollo
 
-- **Edición**: modifica `index.html`, `style.css` y `script.js` según necesites.
-- **Recarga**: si usas un servidor HTTP con live reload, la página recargará automáticamente al guardar.
-- **Debug**: usa las herramientas de desarrollador del navegador (F12) para ver errores y mensajes `console.log()` del `script.js`.
-- **Scores locales**: abre la consola (`F12` → `Console`) y ejecuta `localStorage.getItem('dinoGameScores')` para ver las puntuaciones guardadas.
+- Edición: modifica `index.html`, `style.css` y `script.js` según necesites.
+- Recarga: con `Live Server` la página recargará automáticamente al guardar.
+- Debug: usa las herramientas de desarrollador del navegador (F12) para ver errores y mensajes `console.log` del `script.js`.
 
-## Detalles técnicos
+Buenas prácticas
+---------------
 
-### Almacenamiento de puntuaciones
+- Mantén el CSS modular y evita reglas globales excesivas.
+- Encapsula la lógica de UI en funciones en `script.js`.
+- Usa comentarios claros y descriptivos para facilitar colaboración.
 
-- Las puntuaciones se guardan en **`localStorage`** bajo la clave `"dinoGameScores"`.
-- Se mantienen los **5 mejores intentos** (ordenados de mayor a menor).
-- Las puntuaciones persisten localmente en el navegador; no se sincronizan entre dispositivos.
-- Al hacer Game Over, la puntuación se guarda automáticamente en `localStorage` y se actualiza la tabla.
 
-### Mecánicas del juego
+Contribuir
+---------
 
-- **Delay inicial**: 3 segundos de countdown antes de que aparezca el primer obstáculo.
-- **Reinicio limpio**: al perder, aparece un overlay sin recargar la página; click en "Reiniciar" inicia un nuevo juego.
-- **Dificultad progresiva**: cada 20 puntos se aumentan la velocidad de obstáculos y su frecuencia.
-- **Animación**: el capibara tiene 2 frames animados (duración: 120ms cada frame).
-- **Canvas**: resolución 800x400 píxeles.
+- Haz un fork y crea una rama con un nombre descriptivo.
+- Abre un pull request describiendo los cambios y su propósito.
+- Para pequeñas correcciones (typos, documentación) puedes crear PR directo a `main`.
 
-## Troubleshooting
+Detalles técnicos añadidos
+------------------------
 
-- **Imágenes no se cargan**: verifica que la carpeta `images/` esté en el mismo nivel que `index.html`.
-- **Scores no persisten**: habilita localStorage en tu navegador (algunos modos privados lo desactivan).
-- **Game Over sin transición**: si el capibara aparece sobre un obstáculo al reiniciar, comprueba el valor de `dino.y` inicial en `createDino()`.
+- Delay inicial: el juego espera 3 segundos antes de empezar y mostrar el primer obstáculo.
+- Reinicio limpio: al morir se muestra un overlay con la puntuación y un botón `Reiniciar` que reinicia el juego desde el comienzo (no recarga la página).
+- Scoreboard: las puntuaciones se guardan en `scores.txt` en formato JSON. El servidor (`server.js`) expone `GET /scores` y `POST /scores`.
 
-## Licencia
+Archivos nuevos relevantes
+-------------------------
+
+- `server.js` — servidor Express que sirve la app y persiste puntuaciones.
+- `package.json` — dependencias y script `start`.
+- `scores.txt` — archivo con el historial de puntuaciones (JSON).
+
+Licencia
+--------
 
 Este proyecto no incluye una licencia específica por defecto. Si quieres publicar el proyecto, añade un archivo `LICENSE` con la licencia deseada (por ejemplo, MIT).
 
