@@ -58,7 +58,7 @@ No se requiere `package.json` ni instalación de paquetes para ejecutar el juego
 ## Estructura del proyecto
 
 ```text
-equipo2proyecto/
+src/
 	images/            # sprites, fondos y recursos visuales
 	sound/             # musica y efectos de audio
 	index.html         # estructura principal, menu y modales
