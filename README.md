@@ -1,86 +1,148 @@
-# Proyecto: Sitio web estático
+# Capibara Underground
 
-Descripción
------------
+Juego 2D estilo endless runner hecho con HTML, CSS y JavaScript. Controlas un capibara que debe esquivar obstáculos para sumar puntos mientras la dificultad aumenta con el tiempo.
 
-Este repositorio contiene un sitio web estático simple compuesto por `index.html`, `style.css` y `script.js`. Es una plantilla ligera pensada para demos, prototipos y páginas estáticas sin backend.
+## Tabla de contenido
 
-Objetivos
----------
+- Descripción
+- Características
+- Tecnologías y dependencias
+- Estructura del proyecto
+- Cómo ejecutar
+- Controles
+- Scoreboard y persistencia
+- Configuración rápida
+- Troubleshooting
+- Créditos
+- Contribuir
+- Licencia
 
-- Proveer una estructura mínima para una página web estática.
-- Facilitar el desarrollo local y la extensión del proyecto.
+## Descripción
 
-Estructura de archivos
-----------------------
+Este proyecto incluye:
 
-- `index.html` — entrada principal de la aplicación.
-- `style.css` — estilos CSS globales.
-- `script.js` — lógica de cliente (JavaScript).
+- Menú inicial con botones de inicio, instrucciones, créditos y scoreboard.
+- HUD de juego con puntuación actual y mejor puntuación.
+- Fondo animado con transiciones entre escenas.
+- Obstáculos múltiples (tronco, hongo y volador) con hitboxes configuradas.
+- Sonidos de música, salto y colisión.
 
-Requisitos
----------
+## Características
 
-- Navegador moderno (Chrome, Edge, Firefox, Safari).
-- Para desarrollo con recarga: `Live Server` (extensión de VS Code) o `http-server`/`serve` de npm.
+- Gameplay estilo corredor infinito.
+- Dificultad progresiva con el score.
+- Modo debug de hitboxes (tecla `H`).
+- Reinicio rápido al perder.
+- Scoreboard Top 5 persistido localmente.
 
-Cómo ejecutar localmente
-------------------------
+## Tecnologías y dependencias
 
-Opción 1 — Abrir directamente
+### Runtime
 
-- Abre `index.html` con doble clic o arrástralo al navegador.
+- HTML5 Canvas
+- CSS3
+- JavaScript (ES6+)
+- Web Audio API (`Audio`)
+- Web Storage API (`localStorage`)
 
-Opción 2 — Usar Live Server (recomendado durante desarrollo)
+### Dependencias externas
 
-- Si usas Visual Studio Code instala la extensión `Live Server`.
-- Abre la carpeta del proyecto en VS Code y pulsa `Go Live` en la esquina inferior.
+- Google Fonts (cargadas en `index.html`):
+	- `Press Start 2P`
+	- `VT323`
 
-Opción 3 — Servidor HTTP rápido con npm
+### Dependencias de Node/NPM
 
-- Si tienes Node.js instalado, puedes usar `http-server` o `serve`:
+No se requiere `package.json` ni instalación de paquetes para ejecutar el juego.
 
-```powershell
-npm install -g http-server
-http-server . -c-1
+## Estructura del proyecto
+
+```text
+equipo2proyecto/
+	images/            # sprites, fondos y recursos visuales
+	sound/             # musica y efectos de audio
+	index.html         # estructura principal, menu y modales
+	style.css          # estilos y layout visual
+	script.js          # logica del juego, colisiones y scoreboard
+	README.md
+	LICENSE
 ```
 
-o
+## Cómo ejecutar
 
-```powershell
-npx serve .
-```
+### Abrir directamente
 
-Esto servirá los archivos en `http://localhost:8080` (o puerto alternativo mostrado en consola).
+1. Abre `index.html` en el navegador.
+2. Pulsa `INICIAR`.
 
-Desarrollo
----------
+## Controles
 
-- Edición: modifica `index.html`, `style.css` y `script.js` según necesites.
-- Recarga: con `Live Server` la página recargará automáticamente al guardar.
-- Debug: usa las herramientas de desarrollador del navegador (F12) para ver errores y mensajes `console.log` del `script.js`.
+- `Espacio`: saltar
+- `H`: mostrar/ocultar hitboxes
+- Botones de UI:
+	- `INICIAR`
+	- `INSTRUCCIONES`
+	- `CREDITOS`
+	- `Scoreboard`
+	- `Reintentar`
+	- `Menu`
 
-Buenas prácticas
----------------
+## Scoreboard y persistencia
 
-- Mantén el CSS modular y evita reglas globales excesivas.
-- Encapsula la lógica de UI en funciones en `script.js`.
-- Usa comentarios claros y descriptivos para facilitar colaboración.
+El juego guarda datos en `localStorage`:
 
-Contribuir
----------
+- `capybaraTop5`: top 5 de puntuaciones (descendente).
+- `capybaraBest`: mejor puntuación histórica usada en HUD.
 
-- Haz un fork y crea una rama con un nombre descriptivo.
-- Abre un pull request describiendo los cambios y su propósito.
-- Para pequeñas correcciones (typos, documentación) puedes crear PR directo a `main`.
+Flujo principal:
 
-Licencia
---------
+1. Al perder se ejecuta `saveScoreToBoard(score)`.
+2. Se lee el board actual con `loadScoreboard()`.
+3. Se añade el nuevo score.
+4. Se ordena de mayor a menor.
+5. Se recorta a 5 entradas.
+6. Se guarda de nuevo en `localStorage`.
 
-Este proyecto no incluye una licencia específica por defecto. Si quieres publicar el proyecto, añade un archivo `LICENSE` con la licencia deseada (por ejemplo, MIT).
+Notas:
 
-Contacto
---------
+- Solo se guardan puntuaciones mayores a `0`.
+- El guardado es local por navegador/dispositivo.
+- Si borras datos del navegador, se pierde el historial.
 
-Si necesitas ayuda adicional o quieres que adapte este README (por ejemplo, traducirlo al inglés, agregar badges o instrucciones para despliegue), dime qué prefieres y lo actualizo.
+## Configuración rápida
+
+Constantes útiles en `script.js`:
+
+- `SCOREBOARD_KEY = "capybaraTop5"`
+- `SCOREBOARD_MAX = 5`
+- `VOLADOR_MIN_SCORE = 20`
+
+## Troubleshooting
+
+- Imágenes o sonidos no cargan:
+	- Verifica que `images/` y `sound/` estén en la raíz del proyecto.
+- El scoreboard no guarda:
+	- Revisa que `localStorage` esté habilitado.
+	- Evita modo privado estricto.
+- El juego no inicia:
+	- Abre consola (`F12`) y valida que no haya errores de JavaScript.
+
+## Créditos
+
+- Axel Patricio De Gyves Garcia
+- Luis Carlos Ortiz de Montellano Gómez
+- Edgar Salazar Ríos
+- Emmanuel Gallardo Gómez
+- Regina Flores Gutiérrez
+- Camila Jiménez González
+
+## Contribuir
+
+1. Crea una rama para tu cambio.
+2. Implementa y prueba localmente.
+3. Abre un Pull Request con descripción del cambio y pasos de validación.
+
+## Licencia
+
+Este proyecto está bajo licencia MIT. Revisa el archivo `LICENSE`.
 
