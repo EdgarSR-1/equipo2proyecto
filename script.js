@@ -74,17 +74,17 @@ canvas.height = 400;
 
 
 //Música de fondo
-const bgMusic = new Audio("musica.mp3");
+const bgMusic = new Audio("sound/musica.mp3");
 bgMusic.loop = true;
 bgMusic.volume = 0.3;
 
 
 // Sonido de salto
-const jumpSound = new Audio("salto.mp3");
+const jumpSound = new Audio("sound/salto.mp3");
 jumpSound.volume = 0.5;
 
 // Sonido de colisión
-const hitSound = new Audio("colision.mp3");
+const hitSound = new Audio("sound/colision.mp3");
 hitSound.volume = 0.7;
 
 
