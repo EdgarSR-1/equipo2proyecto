@@ -72,6 +72,22 @@ for (const type of obstacleTypes) {
 canvas.width = 800;
 canvas.height = 400;
 
+
+//Música de fondo
+const bgMusic = new Audio("musica.mp3");
+bgMusic.loop = true;
+bgMusic.volume = 0.3;
+
+
+// Sonido de salto
+const jumpSound = new Audio("salto.mp3");
+jumpSound.volume = 0.5;
+
+// Sonido de colisión
+const hitSound = new Audio("colision.mp3");
+hitSound.volume = 0.7;
+
+
 // Escenas de cielo de fondo. Cada escena es una lista de capas (1.png..N.png) en
 // orden de posición: 1 = más atrás, N = más al frente. Se rota a la siguiente
 // escena cada SCENE_DURATION_MS.
@@ -220,6 +236,9 @@ function resetGame() {
     gameOver = false;
     gameOverBox.classList.add("hidden");
     if (hudScoreEl) hudScoreEl.textContent = "0";
+    // Reproducir música de fondo
+    bgMusic.currentTime = 0;
+    bgMusic.play().catch(() => {});
     gameLoop();
 }
 
@@ -245,6 +264,9 @@ document.addEventListener("keydown", (e) => {
     if (e.code === "Space" && dino.y === DINO_FLOOR_Y) {
         dino.velocityY = -dino.jumpStrength;
         dino.isJumping = true;
+        // Reproducir sonido de salto
+        jumpSound.currentTime = 0;
+        jumpSound.play().catch(() => {});
     }
     if (e.code === "KeyH") {
         showHitboxes = !showHitboxes;
@@ -370,6 +392,11 @@ function checkCollision() {
             d.y + d.height > o.y
         ) {
             gameOver = true;
+            // Reproducir sonido de colisión
+            hitSound.currentTime = 0;
+            hitSound.play().catch(() => {});
+            // Detener música de fondo
+            bgMusic.pause();
             saveScoreToBoard(score);
             finalScore.textContent = "Puntuacion: " + score;
             if (finalBestEl) finalBestEl.textContent = "Mejor: " + bestScore;
@@ -639,6 +666,8 @@ function goToMenu() {
     // Detiene el bucle de juego sin mostrar la caja de Game Over
     gameOver = true;
     if (gameOverBox) gameOverBox.classList.add("hidden");
+    // Detener música de fondo
+    bgMusic.pause();
 
     // Asegura el fondo del menu vivo para que aparezca con el cross-fade
     startMenuBackground();
